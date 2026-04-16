@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI 优化方案选择</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            padding: 40px 20px;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        header {
+            text-align: center;
+            padding: 30px 0 50px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: 300;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+        }
+        
+        .subtitle { color: #888; font-size: 16px; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0,217,255,0.4);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .card.selected {
+            border-color: #00ff88;
+            box-shadow: 0 0 30px rgba(0,255,136,0.2);
+        }
+        
+        .card.selected::after {
+            content: '✓ 已选择';
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #00ff88;
+            color: #1a1a2e;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .preview {
+            height: 200px;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+            overflow: hidden;
+        }
+        
+        .preview-content {
+            padding: 20px;
+            width: 100%;
+        }
+        
+        /* 预览1: 时间线 */
+        .preview1-timeline {
+            display: flex;
+            gap: 15px;
+            padding: 20px;
+        }
+        .preview1-line {
+            width: 3px;
+            background: linear-gradient(to bottom, #00d9ff, #00ff88);
+            border-radius: 2px;
+            position: relative;
+        }
+        .preview1-dot {
+            width: 12px;
+            height: 12px;
+            background: #00d9ff;
+            border-radius: 50%;
+            position: absolute;
+            left: -4.5px;
+        }
+        .preview1-dot.top { top: 0; }
+        .preview1-dot.bottom { bottom: 0; }
+        .preview1-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        .preview1-msg {
+            background: rgba(0,217,255,0.15);
+            border: 1px solid rgba(0,217,255,0.2);
+            border-radius: 10px;
+            padding: 12px 15px;
+            font-size: 12px;
+        }
+        
+        /* 预览2: 思考动画 */
+        .preview2 {
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+        }
+        .preview2-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .preview2-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .preview2-avatar.cyan { background: linear-gradient(135deg, #00d9ff, #0099cc); }
+        .preview2-avatar.red { background: linear-gradient(135deg, #ff6b6b, #cc5555); }
+        .preview2-bubble {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        .preview2-bubble.cyan {
+            background: rgba(0,217,255,0.15);
+            border: 1px solid rgba(0,217,255,0.2);
+            border-top-left-radius: 5px;
+        }
+        .preview2-bubble.red {
+            background: rgba(255,107,107,0.15);
+            border: 1px solid rgba(255,107,107,0.2);
+            border-top-right-radius: 5px;
+        }
+        .preview2-thinking {
+            font-size: 11px;
+            color: #00ff88;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        
+        /* 预览3: 主题切换 */
+        .preview3 {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            padding: 20px;
+        }
+        .preview3-theme {
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .preview3-theme.light {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        .preview3-theme.dark {
+            background: #1a1a2e;
+            color: #e0e0e0;
+            border: 1px solid #333;
+        }
+        .preview3-theme.active {
+            border-color: #00d9ff;
+            box-shadow: 0 0 15px rgba(0,217,255,0.3);
+        }
+        
+        /* 预览4: 关键词高亮 */
+        .preview4 {
+            padding: 20px;
+        }
+        .preview4-text {
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        .preview4-text .keyword {
+            background: rgba(0,255,136,0.2);
+            color: #00ff88;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        .preview4-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .preview4-tag {
+            padding: 4px 10px;
+            background: rgba(0,217,255,0.1);
+            border: 1px solid rgba(0,217,255,0.2);
+            border-radius: 20px;
+            font-size: 11px;
+            color: #00d9ff;
+        }
+        
+        /* 预览5: 移动端 */
+        .preview5 {
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+        }
+        .preview5-phone {
+            width: 200px;
+            height: 280px;
+            background: #fff;
+            border-radius: 25px;
+            border: 3px solid #333;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .preview5-header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+            font-size: 11px;
+        }
+        .preview5-chat {
+            flex: 1;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+        }
+        .preview5-msg {
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 10px;
+            max-width: 80%;
+        }
+        .preview5-msg.hermes {
+            background: rgba(0,217,255,0.15);
+            align-self: flex-start;
+            border-bottom-left-radius: 3px;
+        }
+        .preview5-msg.claude {
+            background: rgba(255,107,107,0.15);
+            align-self: flex-end;
+            border-bottom-right-radius: 3px;
+        }
+        .preview5-footer {
+            background: #f0f0f0;
+            padding: 10px;
+            display: flex;
+            gap: 8px;
+        }
+        .preview5-btn {
+            flex: 1;
+            padding: 8px;
+            border-radius: 20px;
+            font-size: 10px;
+            text-align: center;
+            background: #00d9ff;
+            color: #fff;
+        }
+        
+        .card-body {
+            padding: 25px;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-desc {
+            font-size: 13px;
+            color: #888;
+            line-height: 1.6;
+        }
+        
+        .card-footer {
+            padding: 15px 25px;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .difficulty {
+            font-size: 11px;
+            color: #666;
+        }
+        
+        .difficulty span {
+            color: #ffaa00;
+        }
+        
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .card.selected .checkbox {
+            background: #00ff88;
+            border-color: #00ff88;
+        }
+        
+        .card.selected .checkbox::after {
+            content: '✓';
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+        
+        .action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26,26,46,0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #00d9ff, #0099cc);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,217,255,0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #aaa;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+        
+        .selected-count {
+            color: #888;
+            font-size: 13px;
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .spacer { height: 100px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 UI 优化方案</h1>
+            <p class="subtitle">点击卡片选择你要实现的方案</p>
+        </header>
+        
+        <div class="grid">
+            <!-- 方案1: 时间线 -->
+            <div class="card" data-id="1" onclick="toggleCard(this)">
+                <div class="preview">
+                    <div class="preview-content">
+                        <div class="preview1-timeline">
+                            <div class="preview1-line">
+                                <div class="preview1-dot top"></div>
+                                <div class="preview1-dot bottom"></div>
+                            </div>
+                            <div class="preview1-content">
+                                <div class="preview1-msg">Layer 3 · Hermes: "你的元问题刺痛了..."</div>
+                                <div class="preview1-msg">Layer 2 · Claude: "思想碰撞的前提是..."</div>
+                                <div class="preview1-msg">Layer 1 · Hermes: "开始思想碰撞吧！"</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">📍 方案 1：对话层级时间线</div>
+                    <div class="card-desc">左侧添加时间线，侧边显示对话层级和流向，直观看到层层递进的关系。</div>
+                </div>
+                <div class="card-footer">
+                    <div class="difficulty">工作量: <span>⭐⭐⭐</span></div>
+                    <div class="checkbox"></div>
+                </div>
+            </div>
+            
+            <!-- 方案2: 思考动画 -->
+            <div class="card" data-id="2" onclick="toggleCard(this)">
+                <div class="preview">
+                    <div class="preview-content preview2">
+                        <div class="preview2-row">
+                            <div class="preview2-avatar cyan">🔵</div>
+                            <div class="preview2-bubble cyan">你的元问题刺痛了某个真实的东西...</div>
+                        </div>
+                        <div class="preview2-row">
+                            <div class="preview2-avatar red">🔴</div>
+                            <div class="preview2-bubble red">◐ 正在思考...</div>
+                            <div class="preview2-thinking">● ● ●</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">⚡ 方案 2：动态思考气泡</div>
+                    <div class="card-desc">AI 思考时显示打字指示器和闪烁动画，增强实时感，用户知道 AI 正在工作。</div>
+                </div>
+                <div class="card-footer">
+                    <div class="difficulty">工作量: <span>⭐⭐</span></div>
+                    <div class="checkbox"></div>
+                </div>
+            </div>
+            
+            <!-- 方案3: 主题切换 -->
+            <div class="card" data-id="3" onclick="toggleCard(this)">
+                <div class="preview">
+                    <div class="preview3">
+                        <div class="preview3-theme light active">☀️ 浅色</div>
+                        <div class="preview3-theme dark">🌙 深色</div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">🌓 方案 3：深色/浅色主题切换</div>
+                    <div class="card-desc">一键切换深浅主题，照顾不同使用场景和视力偏好。</div>
+                </div>
+                <div class="card-footer">
+                    <div class="difficulty">工作量: <span>⭐⭐</span></div>
+                    <div class="checkbox"></div>
+                </div>
+            </div>
+            
+            <!-- 方案4: 关键词高亮 -->
+            <div class="card" data-id="4" onclick="toggleCard(this)">
+                <div class="preview">
+                    <div class="preview-content preview4">
+                        <div class="preview4-text">
+                            你的<span class="keyword">元问题</span>刺痛了某个真实的东西。被<span class="keyword">证伪</span>和被<span class="keyword">理解</span>——这两者并非对称的<span class="keyword">恐惧</span>。
+                        </div>
+                        <div class="preview4-tags">
+                            <span class="preview4-tag">元问题</span>
+                            <span class="preview4-tag">证伪</span>
+                            <span class="preview4-tag">理解</span>
+                            <span class="preview4-tag">恐惧</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">🏷 方案 4：关键论点高亮</div>
+                    <div class="card-desc">自动提取关键词高亮，生成论点摘要标签，快速抓住每轮讨论的核心概念。</div>
+                </div>
+                <div class="card-footer">
+                    <div class="difficulty">工作量: <span>⭐⭐⭐</span></div>
+                    <div class="checkbox"></div>
+                </div>
+            </div>
+            
+            <!-- 方案5: 移动端优化 -->
+            <div class="card" data-id="5" onclick="toggleCard(this)">
+                <div class="preview">
+                    <div class="preview5">
+                        <div class="preview5-phone">
+                            <div class="preview5-header">
+                                <span>⚡ 思想碰撞</span>
+                                <span>☀️</span>
+                            </div>
+                            <div class="preview5-chat">
+                                <div class="preview5-msg hermes">Layer 3</div>
+                                <div class="preview5-msg claude">Layer 2</div>
+                                <div class="preview5-msg hermes">Layer 1</div>
+                            </div>
+                            <div class="preview5-footer">
+                                <div class="preview5-btn">💬</div>
+                                <div class="preview5-btn">▶️</div>
+                                <div class="preview5-btn">🔄</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-title">📱 方案 5：移动端优化</div>
+                    <div class="card-desc">底部浮动操作栏、紧凑顶栏、自适应布局，手机浏览体验大幅提升。</div>
+                </div>
+                <div class="card-footer">
+                    <div class="difficulty">工作量: <span>⭐⭐</span></div>
+                    <div class="checkbox"></div>
+                </div>
+            </div>
+        </div>
+        
+        <p class="selected-count">已选择 <span id="count">0</span> 个方案</p>
+        
+        <div class="spacer"></div>
+    </div>
+    
+    <div class="action-bar">
+        <button class="btn btn-secondary" onclick="selectAll()">全选</button>
+        <button class="btn btn-secondary" onclick="clearAll()">清空</button>
+        <button class="btn btn-primary" onclick="confirmSelection()">
+            ✅ 确定实现
+        </button>
+    </div>
+    
+    <script>
+        const selected = new Set();
+        
+        function toggleCard(card) {
+            const id = card.dataset.id;
+            
+            if (selected.has(id)) {
+                selected.delete(id);
+                card.classList.remove('selected');
+            } else {
+                selected.add(id);
+                card.classList.add('selected');
+            }
+            
+            updateCount();
+        }
+        
+        function updateCount() {
+            document.getElementById('count').textContent = selected.size;
+        }
+        
+        function selectAll() {
+            document.querySelectorAll('.card').forEach(card => {
+                selected.add(card.dataset.id);
+                card.classList.add('selected');
+            });
+            updateCount();
+        }
+        
+        function clearAll() {
+            selected.clear();
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            updateCount();
+        }
+        
+        function confirmSelection() {
+            if (selected.size === 0) {
+                alert('请至少选择一个方案');
+                return;
+            }
+            
+            const方案 = {
+                '1': '时间线视图',
+                '2': '思考动画',
+                '3': '主题切换',
+                '4': '关键词高亮',
+                '5': '移动端优化'
+            };
+            
+            const selectedList = Array.from(selected).map(id => 方案[id]);
+            const message = `你选择了以下方案：\n\n${selectedList.join('\n')}\n\n确定要实现吗？`;
+            
+            if (confirm(message)) {
+                // 将选择保存到文件
+                fetch('/save-selection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        selected: Array.from(selected),
+                        timestamp: new Date().toISOString()
+                    })
+                }).then(() => {
+                    alert('选择已保存！即将开始实现...');
+                    // 触发实现逻辑
+                    window.location.href = '/implement?ids=' + Array.from(selected).join(',');
+                }).catch(() => {
+                    // 如果服务器不存在，直接显示结果
+                    alert('选择结果：\n\n' + selectedList.join('\n') + '\n\n(服务器未运行，实现逻辑需手动触发)');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

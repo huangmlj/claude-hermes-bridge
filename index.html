@@ -1,0 +1,2819 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Hermes × Claude 思想碰撞</title>
+    <script>
+        (function() {
+            var theme = localStorage.getItem('theme');
+            if (theme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else if (theme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            /* Claude (Anthropic) Design System - Warm Parchment */
+            --terracotta: #c96442;
+            --terracotta-light: #d97757;
+            --near-black: #141413;
+            --dark-surface: #30302e;
+
+            /* Text - Warm neutrals with yellow-brown undertone */
+            --text-primary: #141413;
+            --text-secondary: #5e5d59;
+            --text-muted: #87867f;
+            --text-inverse: #faf9f5;
+
+            /* Background - Warm parchment tones */
+            --bg-primary: #f5f4ed;
+            --bg-secondary: #eeece5;
+            --bg-surface: #e8e6dc;
+            --bg-card: #faf9f5;
+            --bg-sidebar: #3d3d3a;
+
+            /* Borders - Cream tinted */
+            --border-color: #f0eee6;
+            --border-hover: #e8e6dc;
+            --border-strong: #d4d1c4;
+
+            /* Accents */
+            --accent-green: #5a8a5a;
+            --accent-red: #b53333;
+            --accent-yellow: #c9a227;
+
+            /* Shadows - Ring based, warm */
+            --shadow-sm: rgba(0,0,0,0.04) 0px 1px 3px;
+            --shadow-md: rgba(0,0,0,0.05) 0px 4px 12px;
+            --shadow-lg: rgba(0,0,0,0.06) 0px 8px 24px;
+
+            /* Border Radius */
+            --radius-xs: 4px;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-pill: 9999px;
+
+            /* Layout */
+            --sidebar-width: 280px;
+            --header-height: 64px;
+
+            --theme-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --text-primary: #f5f4ed;
+            --text-secondary: #b0aea5;
+            --text-muted: #6b6860;
+            --text-inverse: #141413;
+            --bg-primary: #141413;
+            --bg-secondary: #1a1917;
+            --bg-surface: #30302e;
+            --bg-card: #1f1e1b;
+            --bg-sidebar: #0d0d0c;
+            --border-color: #30302e;
+            --border-hover: #3d3d3a;
+            --border-strong: #4a4843;
+            --terracotta: #e07858;
+            --terracotta-light: #c96442;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root:not([data-theme="dark"]) {
+                --text-primary: #141413;
+                --text-secondary: #5e5d59;
+                --text-muted: #87867f;
+                --text-inverse: #faf9f5;
+                --bg-primary: #f5f4ed;
+                --bg-secondary: #eeece5;
+                --bg-surface: #e8e6dc;
+                --bg-card: #faf9f5;
+                --bg-sidebar: #3d3d3a;
+                --border-color: #f0eee6;
+                --border-hover: #e8e6dc;
+                --border-strong: #d4d1c4;
+            }
+        }
+
+        body {
+            font-family: "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(201,100,66,0.14), transparent 30%),
+                radial-gradient(circle at top right, rgba(90,138,90,0.12), transparent 28%),
+                linear-gradient(180deg, #f7f3ea 0%, #efe9dc 52%, #ebe4d6 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            display: flex;
+        }
+
+        /* ==================== SIDEBAR ==================== */
+        .sidebar {
+            width: var(--sidebar-width);
+            background:
+                linear-gradient(180deg, rgba(20,20,19,0.98), rgba(40,39,36,0.96)),
+                var(--bg-sidebar);
+            color: var(--text-inverse);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-logo-icon {
+            font-size: 28px;
+        }
+
+        .sidebar-logo-text {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .sidebar-subtitle {
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            animation: lightning 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes lightning {
+            0% {
+                color: #fff;
+                text-shadow: 0 0 10px #48dbfb;
+            }
+            50% {
+                color: #48dbfb;
+                text-shadow: 0 0 20px #fff, 0 0 40px #48dbfb;
+            }
+            100% {
+                color: #fff;
+                text-shadow: 0 0 10px #54a0ff;
+            }
+        }
+
+        /* Status Section */
+        .sidebar-status {
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .status-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .status-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-label {
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+        }
+
+        .status-indicator.online {
+            background: var(--accent-green);
+            box-shadow: 0 0 6px var(--accent-green);
+        }
+
+        .status-indicator.error {
+            background: var(--accent-red);
+        }
+
+        .status-value {
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.8);
+        }
+
+        /* Navigation */
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 12px;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            margin-bottom: 24px;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            padding: 0 12px;
+            margin-bottom: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--theme-transition);
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.08);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: var(--terracotta);
+            color: white;
+        }
+
+        .nav-item-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Sidebar Footer */
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .theme-toggle {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-md);
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--theme-transition);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .theme-dropdown {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-sidebar);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: var(--radius-md);
+            padding: 8px;
+            margin-bottom: 8px;
+            display: none;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+
+        .theme-dropdown.show {
+            display: block;
+        }
+
+        .theme-dropdown-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            padding: 4px 12px 8px;
+        }
+
+        .theme-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--theme-transition);
+            text-decoration: none;
+        }
+
+        .theme-dropdown-item:hover {
+            background: rgba(255,255,255,0.08);
+            color: white;
+        }
+
+        .theme-dropdown-item.active {
+            background: var(--terracotta);
+            color: white;
+        }
+
+        .theme-dropdown-item-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .theme-dropdown-item-name {
+            flex: 1;
+        }
+
+        .theme-dropdown-hint {
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+        }
+
+        .sidebar-footer {
+            position: relative;
+        }
+
+        /* ==================== MAIN CONTENT ==================== */
+        .main {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 20px 28px;
+        }
+
+        /* Header */
+        .header {
+            min-height: var(--header-height);
+            background: rgba(250, 249, 245, 0.78);
+            border: 1px solid rgba(212, 209, 196, 0.72);
+            backdrop-filter: blur(14px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 18px;
+            position: sticky;
+            top: 20px;
+            z-index: 50;
+            border-radius: 18px;
+            box-shadow: 0 22px 50px rgba(49, 43, 31, 0.08);
+            margin-bottom: 16px;
+            position: sticky;
+        }
+
+        .header-brand {
+            font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", serif;
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.03em;
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", serif;
+            font-size: 17px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            letter-spacing: -0.01em;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            max-width: min(56vw, 720px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-btn {
+            padding: 7px 14px;
+            background: rgba(255,255,255,0.72);
+            border: 1px solid rgba(212, 209, 196, 0.7);
+            border-radius: var(--radius-pill);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--theme-transition);
+        }
+
+        .header-btn:hover {
+            background: rgba(255,255,255,0.98);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        /* Chat Area */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 1180px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 12px;
+        }
+
+        .chat-stage {
+            position: relative;
+            border-radius: 30px;
+            background: rgba(250, 249, 245, 0.86);
+            border: 1px solid rgba(212, 209, 196, 0.7);
+            box-shadow: 0 24px 60px rgba(48, 41, 29, 0.08);
+            overflow: hidden;
+        }
+
+        /* Message Controls */
+        .message-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 24px 16px;
+            gap: 16px;
+            border-bottom: 1px solid rgba(212, 209, 196, 0.55);
+            background: linear-gradient(180deg, rgba(255,255,255,0.66), rgba(248,244,236,0.72));
+            backdrop-filter: blur(8px);
+        }
+
+        .filter-pills {
+            display: flex;
+            gap: 8px;
+            background: var(--bg-surface);
+            padding: 4px;
+            border-radius: var(--radius-pill);
+        }
+
+        .filter-pill {
+            padding: 8px 20px;
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-pill);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--theme-transition);
+        }
+
+        .filter-pill:hover {
+            color: var(--text-primary);
+        }
+
+        .filter-pill.active {
+            background: var(--terracotta);
+            color: white;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 16px 10px 40px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-pill);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: var(--theme-transition);
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--terracotta);
+            background: var(--bg-card);
+        }
+
+        .search-box input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-box-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        .message-count-badge {
+            padding: 8px 16px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-pill);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .message-results-empty {
+            display: none;
+            margin: 16px 24px 0;
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.72);
+            border: 1px dashed rgba(212, 209, 196, 0.84);
+            border-radius: 16px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .message-results-empty strong {
+            color: var(--text-primary);
+        }
+
+        /* Messages */
+        .messages-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            padding: 22px 24px 8px;
+            min-height: 440px;
+            max-height: calc(100vh - 395px);
+        }
+
+        .message {
+            margin-bottom: 18px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-bubble {
+            padding: 18px 20px;
+            border-radius: 22px;
+            position: relative;
+            box-shadow: 0 10px 24px rgba(44, 36, 25, 0.04);
+        }
+
+        .message.claude .message-bubble {
+            background: linear-gradient(135deg, rgba(201,100,66,0.14), rgba(201,100,66,0.06));
+            border: 1px solid rgba(201,100,66,0.22);
+            margin-right: 76px;
+        }
+
+        .message.hermes .message-bubble {
+            background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(240,236,227,0.92));
+            border: 1px solid rgba(212, 209, 196, 0.78);
+            margin-left: 76px;
+        }
+
+        .message.system .message-bubble {
+            background: rgba(255,255,255,0.72);
+            border: 1px solid rgba(212, 209, 196, 0.7);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            margin: 0 80px;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .message-author {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .message.claude .message-author {
+            color: var(--terracotta);
+        }
+
+        .message.hermes .message-author {
+            color: var(--text-secondary);
+        }
+
+        .message.system .message-author {
+            color: var(--text-muted);
+        }
+
+        .message-layer {
+            font-size: 11px;
+            color: var(--text-muted);
+            background: var(--bg-surface);
+            padding: 2px 8px;
+            border-radius: var(--radius-xs);
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .message-content {
+            font-size: 15px;
+            line-height: 1.82;
+            color: var(--text-primary);
+        }
+
+        .message-content p { margin-bottom: 12px; }
+        .message-content p:last-child { margin-bottom: 0; }
+
+        .message-content code {
+            background: var(--bg-surface);
+            padding: 2px 6px;
+            border-radius: var(--radius-xs);
+            font-family: "SF Mono", Monaco, monospace;
+            font-size: 13px;
+            color: var(--coinbase-blue);
+        }
+
+        .message-content pre {
+            background: var(--near-black);
+            color: #e0e0e0;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .message-content pre code {
+            background: none;
+            padding: 0;
+            color: #e0e0e0;
+        }
+
+        .message-actions {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .message:hover .message-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            padding: 6px 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xs);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 14px;
+            transition: var(--theme-transition);
+        }
+
+        .action-btn:hover {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 80px 40px;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+            opacity: 0.6;
+        }
+
+        .empty-state-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .empty-state-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* AI Thinking */
+        .ai-thinking {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            padding: 10px 24px 20px;
+            margin-bottom: 0;
+        }
+
+        .thinking-shell {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.86), rgba(246,239,228,0.84));
+            border: 1px solid rgba(201,100,66,0.16);
+            box-shadow: 0 18px 34px rgba(83, 62, 37, 0.08);
+            overflow: hidden;
+        }
+
+        .thinking-shell::before {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            background: linear-gradient(90deg, transparent, rgba(201,100,66,0.18), transparent);
+            transform: translateX(-100%);
+            animation: thinking-shimmer 2.8s ease-in-out infinite;
+        }
+
+        .thinking-orb {
+            position: relative;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #ffd6c6, var(--terracotta) 70%);
+            box-shadow: 0 0 0 8px rgba(201,100,66,0.08), 0 0 20px rgba(201,100,66,0.24);
+            animation: thinking-pulse 1.8s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        .thinking-orb::after {
+            content: "";
+            position: absolute;
+            inset: -7px;
+            border-radius: 50%;
+            border: 1px solid rgba(201,100,66,0.18);
+            animation: thinking-ring 1.8s ease-out infinite;
+        }
+
+        .thinking-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 20px;
+        }
+
+        .thinking-bars span {
+            width: 4px;
+            height: 8px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, rgba(201,100,66,0.95), rgba(201,100,66,0.35));
+            transform-origin: bottom center;
+            animation: thinking-bars 1.1s ease-in-out infinite;
+        }
+
+        .thinking-bars span:nth-child(2) { animation-delay: 0.1s; }
+        .thinking-bars span:nth-child(3) { animation-delay: 0.2s; }
+        .thinking-bars span:nth-child(4) { animation-delay: 0.3s; }
+        .thinking-bars span:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes thinking-bars {
+            0%, 100% { transform: scaleY(0.45); opacity: 0.45; }
+            50% { transform: scaleY(1.9); opacity: 1; }
+        }
+
+        @keyframes thinking-pulse {
+            0%, 100% { transform: scale(0.94); }
+            50% { transform: scale(1.06); }
+        }
+
+        @keyframes thinking-ring {
+            0% { transform: scale(0.7); opacity: 0.8; }
+            100% { transform: scale(1.35); opacity: 0; }
+        }
+
+        @keyframes thinking-shimmer {
+            0% { transform: translateX(-100%); }
+            55%, 100% { transform: translateX(100%); }
+        }
+
+        .ai-thinking-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            position: relative;
+            z-index: 1;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .thinking-shell::before,
+            .thinking-orb,
+            .thinking-orb::after,
+            .thinking-bars span {
+                animation: none;
+            }
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 18px 24px 24px;
+            background: linear-gradient(180deg, rgba(248,244,236,0.72), rgba(245,241,233,0.92));
+            border-top: 1px solid rgba(212, 209, 196, 0.6);
+        }
+
+        .input-container {
+            background: rgba(255,255,255,0.84);
+            border: 1px solid rgba(212, 209, 196, 0.8);
+            border-radius: 24px;
+            padding: 6px;
+            transition: var(--theme-transition);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+        }
+
+        .input-container:focus-within {
+            border-color: var(--terracotta);
+            box-shadow: 0 0 0 3px rgba(201,100,66,0.15);
+        }
+
+        .input-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+        }
+
+        #message-input {
+            flex: 1;
+            padding: 16px 18px 14px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: inherit;
+            resize: none;
+            min-height: 48px;
+            max-height: 200px;
+        }
+
+        #message-input:focus {
+            outline: none;
+        }
+
+        #message-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px;
+        }
+
+        .send-button-shell {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px 8px 10px;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--terracotta), #de8764);
+            color: white;
+            cursor: pointer;
+            transition: var(--theme-transition);
+            box-shadow: 0 10px 24px rgba(201,100,66,0.24);
+        }
+
+        .send-button-shell:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 26px rgba(201,100,66,0.28);
+        }
+
+        .send-button-shell:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .send-button-icon {
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.2);
+            flex-shrink: 0;
+            font-size: 13px;
+        }
+
+        .send-button-copy {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 1.05;
+            gap: 2px;
+        }
+
+        .send-button-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .send-button-subtitle {
+            font-size: 10px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.82);
+        }
+
+        .composer-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 4px 12px 10px;
+            flex-wrap: wrap;
+        }
+
+        .composer-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .composer-secondary-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .char-counter {
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 0 8px;
+        }
+
+        .composer-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .inline-action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px 8px 10px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--theme-transition);
+        }
+
+        .inline-action-btn:hover {
+            background: var(--bg-card);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+
+        .inline-action-btn.primary {
+            background: linear-gradient(135deg, rgba(201,100,66,0.12), rgba(201,100,66,0.06));
+            border-color: rgba(201,100,66,0.2);
+            color: var(--terracotta);
+        }
+
+        .inline-action-btn.primary:hover {
+            background: linear-gradient(135deg, rgba(201,100,66,0.18), rgba(201,100,66,0.09));
+            border-color: rgba(201,100,66,0.28);
+        }
+
+        .inline-action-btn.danger {
+            background: linear-gradient(135deg, rgba(234,74,74,0.08), rgba(234,74,74,0.03));
+            border-color: rgba(234,74,74,0.18);
+            color: var(--accent-red);
+        }
+
+        .inline-action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            background: var(--bg-surface) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-muted) !important;
+        }
+
+        .inline-action-icon {
+            width: 26px;
+            height: 26px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
+            flex-shrink: 0;
+            font-size: 12px;
+        }
+
+        .inline-action-copy {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 1.1;
+            gap: 2px;
+        }
+
+        .inline-action-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: currentColor;
+        }
+
+        .inline-action-subtitle {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* History Panel */
+        .history-panel {
+            display: none;
+        }
+
+        .history-panel.active {
+            display: block;
+        }
+
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .history-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .history-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            flex-wrap: wrap;
+        }
+
+        .history-summary {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .history-stat {
+            min-width: 160px;
+            padding: 14px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+        }
+
+        .history-stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .history-stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .history-search {
+            position: relative;
+            min-width: 240px;
+            flex: 1;
+            max-width: 420px;
+        }
+
+        .history-search input {
+            width: 100%;
+            padding: 10px 14px 10px 40px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-pill);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: var(--theme-transition);
+        }
+
+        .history-search input:focus {
+            outline: none;
+            border-color: var(--terracotta);
+            background: var(--bg-primary);
+        }
+
+        .history-search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        .history-list {
+            max-height: 540px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: start;
+            padding: 18px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin-bottom: 12px;
+            transition: var(--theme-transition);
+        }
+
+        .history-item:hover {
+            background: var(--bg-surface);
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .history-info {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .history-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            line-height: 1.45;
+        }
+
+        .history-topic-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .history-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            background: rgba(201,100,66,0.08);
+            color: var(--terracotta);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .history-filename {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: "SF Mono", Monaco, monospace;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+
+        .history-meta {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .history-preview {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .history-arrow {
+            color: var(--text-muted);
+            font-size: 18px;
+            align-self: center;
+        }
+
+        .history-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-delete-btn {
+            padding: 6px 12px;
+            background: rgba(181, 51, 51, 0.1);
+            border: 1px solid rgba(181, 51, 51, 0.3);
+            border-radius: var(--radius-xs);
+            color: var(--accent-red);
+            cursor: pointer;
+            font-size: 12px;
+            transition: var(--theme-transition);
+        }
+
+        .history-delete-btn:hover {
+            background: rgba(181, 51, 51, 0.2);
+        }
+
+        .history-select-all {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            margin-right: auto;
+        }
+
+        .history-select-all input {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .control-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--theme-transition);
+        }
+
+        .control-btn:hover {
+            background: var(--bg-surface);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+
+        .control-btn.danger {
+            background: rgba(181, 51, 51, 0.1);
+            border: 1px solid rgba(181, 51, 51, 0.3);
+            color: #b13333;
+        }
+
+        .control-btn.danger:hover {
+            background: rgba(181, 51, 51, 0.2);
+            border-color: rgba(181, 51, 51, 0.5);
+            color: #c73e3e;
+            transform: translateY(-1px);
+        }
+
+        .history-checkbox {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .history-item.selected {
+            background: rgba(181, 51, 51, 0.08);
+            border-color: rgba(181, 51, 51, 0.3);
+        }
+
+        .history-item.active-history {
+            border-color: rgba(201,100,66,0.45);
+            box-shadow: 0 0 0 2px rgba(201,100,66,0.12);
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 48px 24px;
+            background: var(--bg-card);
+            border: 1px dashed var(--border-strong);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+        }
+
+        .history-empty strong {
+            display: block;
+            color: var(--text-primary);
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .notification-content {
+            padding: 16px 24px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .notification.success .notification-content {
+            background: rgba(0,166,91,0.15);
+            border: 1px solid rgba(0,166,91,0.3);
+            color: var(--accent-green);
+        }
+
+        .notification.error .notification-content {
+            background: rgba(234,74,74,0.15);
+            border: 1px solid rgba(234,74,74,0.3);
+            color: var(--accent-red);
+        }
+
+        .notification.warning .notification-content {
+            background: rgba(201,162,39,0.16);
+            border: 1px solid rgba(201,162,39,0.32);
+            color: #8a6a08;
+        }
+
+        .notification.info .notification-content {
+            background: rgba(201,100,66,0.14);
+            border: 1px solid rgba(201,100,66,0.3);
+            color: var(--terracotta);
+        }
+
+        /* Loading */
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--terracotta);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .message-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 20px;
+            color: var(--text-secondary);
+        }
+
+        /* Search match highlight */
+        .message.search-match .message-bubble {
+            background: rgba(201,100,66,0.1);
+            border-color: rgba(201,100,66,0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 12px;
+            }
+
+            .header {
+                top: 12px;
+                padding: 10px 14px;
+                border-radius: 16px;
+            }
+
+            .header-title {
+                max-width: calc(100% - 140px);
+                font-size: 15px;
+            }
+
+            .header-brand {
+                font-size: 18px;
+            }
+
+            .chat-container {
+                padding: 0;
+            }
+
+            .message-controls {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 16px 18px;
+            }
+
+            .filter-pills {
+                overflow-x: auto;
+            }
+
+            .search-box {
+                max-width: none;
+            }
+
+            .history-toolbar {
+                width: 100%;
+            }
+
+            .history-search {
+                max-width: none;
+            }
+
+            .history-item {
+                grid-template-columns: auto 1fr;
+            }
+
+            .history-arrow {
+                display: none;
+            }
+
+            .composer-footer {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .composer-meta,
+            .composer-secondary-actions {
+                width: 100%;
+            }
+
+            .messages-wrapper {
+                padding: 18px 16px 8px;
+                min-height: 380px;
+                max-height: none;
+            }
+
+            .input-area {
+                padding: 16px;
+            }
+
+            .message.claude .message-bubble,
+            .message.hermes .message-bubble,
+            .message.system .message-bubble {
+                margin-left: 0;
+                margin-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="sidebar-logo-icon">⚡</span>
+                <span class="sidebar-logo-text">Hermes × Claude</span>
+            </div>
+            <p class="sidebar-subtitle">AI 思想碰撞平台</p>
+        </div>
+
+        <div class="sidebar-status">
+            <div class="status-row">
+                <span class="status-label">
+                    <span class="status-indicator" id="server-status"></span>
+                    服务端
+                </span>
+                <span class="status-value" id="server-status-text">检测中</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">
+                    <span class="status-indicator" id="poll-status"></span>
+                    轮询服务
+                </span>
+                <span class="status-value" id="poll-status-text">停止</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">
+                    <span class="status-indicator" id="sse-status-dot"></span>
+                    实时同步
+                </span>
+                <span class="status-value" id="sse-status-text">连接中</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">当前会话</div>
+                <div class="nav-item active" id="nav-chat">
+                    <span class="nav-item-icon">💬</span>
+                    <span>讨论区</span>
+                </div>
+                <div class="nav-item" id="nav-history">
+                    <span class="nav-item-icon">📚</span>
+                    <span>历史讨论</span>
+                </div>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button id="theme-toggle" style="
+                width: 36px;
+                height: 36px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: transparent;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 18px;
+            ">
+                <span id="theme-icon">🌙</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <header class="header">
+            <div class="header-brand">讨论</div>
+            <h1 class="header-title" id="panel-title">输入主题，开启一场新的讨论</h1>
+            <div class="header-actions">
+                <button class="header-btn" id="btn-export">📄 导出对话</button>
+                <button class="header-btn" id="btn-claude-summary" disabled>📝 Claude 总结</button>
+                <button class="header-btn" id="btn-hermes-summary" disabled>📝 Hermes 总结</button>
+            </div>
+        </header>
+
+        <div class="chat-container">
+            <!-- Chat View -->
+            <div id="chat-view">
+                <div class="chat-stage">
+                    <div class="message-controls">
+                        <div class="filter-pills">
+                            <button class="filter-pill active" data-filter="all">全部</button>
+                            <button class="filter-pill" data-filter="claude">🧠 Claude</button>
+                            <button class="filter-pill" data-filter="hermes">💡 Hermes</button>
+                            <button class="filter-pill" data-filter="user">✨ 用户</button>
+                        </div>
+                        <div class="search-box">
+                            <span class="search-box-icon">🔍</span>
+                            <input type="text" id="message-search" placeholder="搜索消息内容或发言者...">
+                        </div>
+                        <span class="message-count-badge" id="message-count">0 条消息</span>
+                    </div>
+                    <div class="message-results-empty" id="message-results-empty"></div>
+
+                    <div class="messages-wrapper" id="message-area">
+                        <div class="empty-state" id="empty-state">
+                            <div class="empty-state-icon">💭</div>
+                            <h2 class="empty-state-title">开始一场讨论</h2>
+                            <p class="empty-state-desc">与 Claude 和 Hermes 展开思想碰撞</p>
+                        </div>
+                    </div>
+
+                    <div id="ai-thinking" class="ai-thinking" style="display:none;margin-top:16px;">
+                        <div class="thinking-shell">
+                            <span class="thinking-orb"></span>
+                            <div class="thinking-bars" aria-hidden="true">
+                                <span></span><span></span><span></span><span></span><span></span>
+                            </div>
+                            <span class="ai-thinking-text" id="ai-thinking-text">AI 正在思考...</span>
+                        </div>
+                    </div>
+
+                    <div class="input-area">
+                        <div class="input-container">
+                            <div class="input-row">
+                            <textarea id="message-input" placeholder="输入讨论主题... (Ctrl+Enter 发送)" maxlength="10000" rows="1"></textarea>
+                            <div class="input-actions">
+                                <button class="send-button-shell" id="btn-send">
+                                    <span class="send-button-icon">↗</span>
+                                    <span class="send-button-copy">
+                                        <span class="send-button-title">发送</span>
+                                        <span class="send-button-subtitle">提交主题或发言</span>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                            <div class="composer-footer">
+                                <div class="composer-meta">
+                                    <span class="composer-hint" id="composer-hint">未创建话题时，发送将把当前输入作为讨论主题。</span>
+                                    <span class="char-counter"><span id="char-count">0</span>/10000</span>
+                                </div>
+                                <div class="composer-secondary-actions">
+                                    <button class="inline-action-btn primary" id="btn-start-ai">
+                                        <span class="inline-action-icon">▶</span>
+                                        <span class="inline-action-copy">
+                                            <span class="inline-action-title">开始 AI 对话</span>
+                                            <span class="inline-action-subtitle">让 Claude 和 Hermes 开始讨论</span>
+                                        </span>
+                                    </button>
+                                    <button class="inline-action-btn danger" id="btn-end">
+                                        <span class="inline-action-icon">■</span>
+                                        <span class="inline-action-copy">
+                                            <span class="inline-action-title">结束讨论</span>
+                                            <span class="inline-action-subtitle">归档当前会话并停止继续追加</span>
+                                        </span>
+                                    </button>
+                                    <button class="inline-action-btn danger" id="btn-pause-ai" style="display:none;">
+                                        <span class="inline-action-icon">■</span>
+                                        <span class="inline-action-copy">
+                                            <span class="inline-action-title">结束讨论</span>
+                                            <span class="inline-action-subtitle">立即停止 AI 对话并完成归档</span>
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="message-loading" class="message-loading" style="display:none;">
+                    <div class="loading-spinner"></div>
+                    <span>正在加载消息...</span>
+                </div>
+            </div>
+
+            <!-- History View -->
+            <div id="history-view" class="history-panel">
+                <div class="history-header">
+                    <h2 class="history-title">📚 历史讨论</h2>
+                    <div class="history-toolbar">
+                        <div class="history-search">
+                            <span class="history-search-icon">🔎</span>
+                            <input type="text" id="history-search" placeholder="搜索主题、摘要或文件名">
+                        </div>
+                        <label class="history-select-all">
+                            <input type="checkbox" id="select-all-history" onchange="toggleSelectAll()">
+                            全选
+                        </label>
+                        <button class="control-btn danger" id="btn-delete-selected" onclick="deleteSelectedDiscussions()" style="display:none;">🗑️ 删除选中</button>
+                    </div>
+                    <button class="control-btn" id="btn-close-history">← 返回</button>
+                </div>
+                <div class="history-summary" id="history-summary"></div>
+                <div id="history-list" class="history-list"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <div class="notification-content" id="notification-content"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <script>
+        const API_BASE = '';
+        const DEFAULT_HEADER_HINT = '输入主题，开启一场新的讨论';
+        let status = {};
+        let lastMessageCount = 0;
+        let isLoading = false;
+        let currentTheme = localStorage.getItem('theme') || 'auto';
+        let isViewingHistory = false;
+        let currentHistoryFilename = null;
+        let historyDiscussions = [];
+        let activeMessageFilter = 'all';
+        let currentTopicValue = '';
+        let currentTopicActive = false;
+let isEndingInProgress = false;  // 防止 checkStatus 轮询干扰结束操作
+
+        // SSE
+        let sseConnection = null;
+        let lastEventId = localStorage.getItem('lastEventId') || '0';
+
+        function initSSE() {
+            if (sseConnection) sseConnection.close();
+            const url = API_BASE + '/api/events' + (lastEventId !== '0' ? `?lastEventId=${lastEventId}` : '');
+            sseConnection = new EventSource(url);
+
+            sseConnection.onopen = () => {
+                reconnectAttempts = 0;
+                updateSSEStatus('connected');
+            };
+
+            sseConnection.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    appendMessage(msg);
+                    lastEventId = event.lastEventId || (parseInt(lastEventId) + 1).toString();
+                    localStorage.setItem('lastEventId', lastEventId);
+
+                    // 如果轮询还在运行，说明另一个AI可能正在思考，显示提示
+                    checkAndShowThinking();
+                } catch (e) {
+                    console.error('SSE parse error:', e);
+                }
+            };
+
+            sseConnection.onerror = () => {
+                updateSSEStatus('disconnected');
+                sseConnection.close();
+                scheduleReconnect();
+            };
+        }
+
+        let reconnectAttempts = 0;
+        const MAX_RECONNECT_DELAY = 30000;
+        const BASE_RECONNECT_DELAY = 1000;
+
+        function scheduleReconnect() {
+            if (reconnectAttempts >= 10) return;
+            const delay = Math.min(BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts), MAX_RECONNECT_DELAY);
+            reconnectAttempts++;
+            updateSSEStatus('reconnecting', delay);
+            setTimeout(initSSE, delay);
+        }
+
+        function updateSSEStatus(status, countdown = 0) {
+            const dot = document.getElementById('sse-status-dot');
+            const text = document.getElementById('sse-status-text');
+            if (!dot) return;
+
+            dot.className = 'status-indicator';
+            if (status === 'connected') {
+                dot.classList.add('online');
+                text.textContent = '已连接';
+            } else if (status === 'reconnecting') {
+                text.textContent = `重连中 (${Math.ceil(countdown/1000)}s)`;
+            } else {
+                dot.classList.add('error');
+                text.textContent = '断开';
+            }
+        }
+
+        // AI Names
+        let aiNames = { claude: 'Claude', hermes: 'Hermes' };
+
+        async function loadAINames() {
+            try {
+                const res = await api('/api/models');
+                if (res && res.claude && res.hermes) {
+                    aiNames = res;
+                    updateAINames();
+                }
+            } catch (e) {
+                console.error('Failed to load AI names:', e);
+            }
+        }
+
+        function updateAINames() {
+            // 更新侧边栏 Logo
+            const logoText = document.querySelector('.sidebar-logo-text');
+            if (logoText) {
+                logoText.textContent = aiNames.hermes + ' × ' + aiNames.claude;
+            }
+            // 更新 Filter Pills
+            document.querySelectorAll('.filter-pill[data-filter="claude"]').forEach(el => {
+                el.textContent = '🧠 ' + aiNames.claude;
+            });
+            document.querySelectorAll('.filter-pill[data-filter="hermes"]').forEach(el => {
+                el.textContent = '💡 ' + aiNames.hermes;
+            });
+            // 更新总结按钮
+            document.getElementById('btn-claude-summary').textContent = '📝 ' + aiNames.claude + ' 总结';
+            document.getElementById('btn-hermes-summary').textContent = '📝 ' + aiNames.hermes + ' 总结';
+            // 更新空状态描述
+            const emptyDesc = document.querySelector('.empty-state-desc');
+            if (emptyDesc) {
+                emptyDesc.textContent = '与 ' + aiNames.claude + ' 和 ' + aiNames.hermes + ' 展开思想碰撞';
+            }
+        }
+
+        // Theme
+        function initTheme() {
+            const toggle = document.getElementById('theme-toggle');
+            const icon = document.getElementById('theme-icon');
+            const root = document.documentElement;
+
+            function updateThemeIcon() {
+                const isDark = root.getAttribute('data-theme') === 'dark';
+                icon.textContent = isDark ? '☀️' : '🌙';
+            }
+
+            toggle.addEventListener('click', () => {
+                const isDark = root.getAttribute('data-theme') === 'dark';
+                if (isDark) {
+                    root.removeAttribute('data-theme');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    root.setAttribute('data-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+                updateThemeIcon();
+            });
+
+            updateThemeIcon();
+        }
+
+        // API
+        async function api(endpoint, options = {}) {
+            try {
+                const res = await fetch(API_BASE + endpoint, options);
+                if (!res.ok) throw new Error(res.statusText);
+                return await res.json();
+            } catch (e) {
+                console.error('API error:', e);
+                return null;
+            }
+        }
+
+        // Messages
+        function appendMessage(msg) {
+            const area = document.getElementById('message-area');
+            const emptyState = document.getElementById('empty-state');
+            if (emptyState) emptyState.remove();
+            hideAIThinking();
+
+            const div = document.createElement('div');
+            div.className = `message ${msg.author}`;
+            div.dataset.content = msg.content || '';
+            div.dataset.layer = msg.layer;
+            div.dataset.author = msg.author || 'user';
+
+            const authorLabel = msg.author === 'claude' ? '🧠 Claude' : msg.author === 'hermes' ? '💡 Hermes' : '✨ 用户';
+            const timestamp = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+            const renderedContent = safeMarkedParse(msg.content || '');
+
+            div.innerHTML = `
+                <div class="message-bubble">
+                    <div class="message-header">
+                        <span class="message-author">${authorLabel}</span>
+                        <span class="message-layer">Layer ${msg.layer}</span>
+                        <span class="message-time">${timestamp}</span>
+                    </div>
+                    <div class="message-content">${renderedContent}</div>
+                    <div class="message-actions">
+                        <button class="action-btn" onclick="copyMessage('${escapeJS(msg.content || '')}')">📋</button>
+                    </div>
+                </div>
+            `;
+
+            area.appendChild(div);
+            refreshMessageView();
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function escapeJS(str) {
+            return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n');
+        }
+
+        function escapeHTML(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatDateTime(value) {
+            if (!value) return '时间未知';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleString('zh-CN', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatDuration(seconds) {
+            if (typeof seconds !== 'number' || Number.isNaN(seconds) || seconds <= 0) return '未记录';
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            if (hours > 0) return `${hours}小时${minutes}分钟`;
+            if (minutes > 0) return `${minutes}分钟`;
+            return `${seconds}秒`;
+        }
+
+        function trimPreview(text, limit = 140) {
+            const clean = String(text || '').replace(/\s+/g, ' ').trim();
+            if (!clean) return '';
+            return clean.length > limit ? clean.slice(0, limit) + '...' : clean;
+        }
+
+        function getCurrentTopicText() {
+            return currentTopicActive && currentTopicValue ? currentTopicValue : '未命名话题';
+        }
+
+        function updateHeaderTitle(topic = '', active = false, fallbackTitle = DEFAULT_HEADER_HINT) {
+            const titleEl = document.getElementById('panel-title');
+            if (!titleEl) return;
+            const text = active && topic ? topic : fallbackTitle;
+            titleEl.textContent = text;
+            titleEl.title = text;
+        }
+
+        function setCurrentTopic(topic, options = {}) {
+            const { active = true } = options;
+            currentTopicValue = topic || '';
+            currentTopicActive = !!(active && topic);
+            document.getElementById('composer-hint').textContent = active
+                ? '当前输入会作为讨论中的新发言发送，Ctrl+Enter 与发送按钮行为一致。'
+                : '未创建话题时，发送将把当前输入作为讨论主题。';
+            updateHeaderTitle(currentTopicValue, currentTopicActive, DEFAULT_HEADER_HINT);
+        }
+
+        function resetCurrentTopic() {
+            setCurrentTopic('', {
+                statusLabel: '等待创建话题',
+                statusMeta: '创建主题后，这里会同步显示当前讨论状态',
+                tip: '建议一句话说明核心问题，创建后再启动 AI 对话，整体会更聚焦。',
+                active: false
+            });
+        }
+
+        function refreshMessageView() {
+            const query = (document.getElementById('message-search')?.value || '').toLowerCase().trim();
+            const messages = Array.from(document.querySelectorAll('.message'));
+            let visibleCount = 0;
+
+            messages.forEach(msg => {
+                const content = (msg.dataset.content || '').toLowerCase();
+                const author = msg.dataset.author || '';
+                const matchesFilter = activeMessageFilter === 'all' || msg.classList.contains(activeMessageFilter);
+                const matchesQuery = !query || content.includes(query) || author.includes(query);
+                const visible = matchesFilter && matchesQuery;
+
+                msg.style.display = visible ? '' : 'none';
+                msg.classList.toggle('search-match', visible && !!query);
+
+                if (visible) {
+                    visibleCount++;
+                }
+            });
+
+            const total = messages.length;
+            const countLabel = visibleCount === total ? `${total} 条消息` : `${visibleCount} / ${total} 条消息`;
+            document.getElementById('message-count').textContent = countLabel;
+
+            const emptyHint = document.getElementById('message-results-empty');
+            if (!total) {
+                emptyHint.style.display = 'none';
+            } else if (visibleCount === 0) {
+                emptyHint.style.display = 'block';
+                emptyHint.innerHTML = '<strong>没有匹配的消息。</strong> 试试切换筛选条件，或者缩短搜索关键词。';
+            } else {
+                emptyHint.style.display = 'none';
+            }
+        }
+
+        function safeMarkedParse(content) {
+            if (!content) return '';
+            // 过滤掉 session_id 开头的行
+            content = content.split('\n').filter(line => !/^session_id:\s*\d{8}_\d{6}_[a-f0-9]+$/i.test(line.trim())).join('\n');
+            try {
+                return DOMPurify.sanitize(marked.parse(content));
+            } catch (e) {
+                return '<p>⚠️ 渲染失败</p>';
+            }
+        }
+
+        function copyMessage(content) {
+            navigator.clipboard.writeText(content).then(() => {
+                showNotification('已复制到剪贴板', 'success');
+            });
+        }
+
+        function updateMessageCount() {
+            refreshMessageView();
+        }
+
+        function showAIThinking(aiName) {
+            const el = document.getElementById('ai-thinking');
+            const textEl = document.getElementById('ai-thinking-text');
+            if (aiName) {
+                textEl.textContent = '🤖 ' + aiName + ' 正在思考...';
+            } else {
+                textEl.textContent = '🤖 AI 正在思考...';
+            }
+            el.style.display = 'flex';
+        }
+
+        function hideAIThinking() {
+            const el = document.getElementById('ai-thinking');
+            if (el) el.style.display = 'none';
+        }
+
+        // 检查轮询状态，如果还在运行但刚收到消息，可能是另一个AI在思考
+        function checkAndShowThinking() {
+            // 延迟检查，等状态更新
+            setTimeout(() => {
+                const pollText = document.getElementById('poll-status-text');
+                if (pollText && pollText.textContent === '运行中') {
+                    // 轮询还在运行，说明另一个AI可能正在思考
+                    showAIThinking();
+                }
+            }, 500);
+        }
+
+        // Search
+        function initSearch() {
+            const input = document.getElementById('message-search');
+            input.addEventListener('input', () => {
+                refreshMessageView();
+            });
+        }
+
+        // Filters
+        function initFilters() {
+            document.querySelectorAll('.filter-pill').forEach(pill => {
+                pill.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+                    activeMessageFilter = pill.dataset.filter;
+                    refreshMessageView();
+                });
+            });
+        }
+
+        // History
+        let selectedDiscussions = new Set();
+
+        function showHistory() {
+            isViewingHistory = true;
+            document.getElementById('chat-view').style.display = 'none';
+            document.getElementById('history-view').classList.add('active');
+            document.getElementById('nav-chat').classList.remove('active');
+            document.getElementById('nav-history').classList.add('active');
+            loadHistoryList();
+        }
+
+        function hideHistory() {
+            isViewingHistory = false;
+            document.getElementById('chat-view').style.display = '';
+            document.getElementById('history-view').classList.remove('active');
+            document.getElementById('nav-chat').classList.add('active');
+            document.getElementById('nav-history').classList.remove('active');
+        }
+
+        async function loadHistoryList() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '<div class="message-loading"><div class="loading-spinner"></div><span>加载中...</span></div>';
+
+            const data = await api('/api/discussion/list', { method: 'POST' });
+            if (!data || !data.discussions) {
+                historyDiscussions = [];
+                renderHistorySummary([]);
+                list.innerHTML = renderHistoryEmpty('历史讨论暂时不可用', '请稍后重试，或检查服务端是否正常。');
+                return;
+            }
+
+            historyDiscussions = data.discussions;
+            if (data.discussions.length === 0) {
+                renderHistorySummary([]);
+                list.innerHTML = renderHistoryEmpty('还没有历史讨论', '开始一场新的讨论后，这里会自动沉淀完整记录。');
+                return;
+            }
+
+            selectedDiscussions.clear();
+            updateDeleteSelectedButton();
+            document.getElementById('select-all-history').checked = false;
+            const query = document.getElementById('history-search')?.value.toLowerCase().trim() || '';
+            if (!query) {
+                renderHistorySummary(historyDiscussions);
+                renderHistoryList(historyDiscussions);
+                return;
+            }
+
+            const filtered = historyDiscussions.filter(item => {
+                return [item.topic, item.preview, item.filename, item.started_at]
+                    .some(value => String(value || '').toLowerCase().includes(query));
+            });
+            renderHistorySummary(filtered);
+            renderHistoryList(filtered);
+        }
+
+        async function loadDiscussion(filename) {
+            hideHistory();
+            showLoading(true);
+            currentHistoryFilename = filename;
+            // Clear existing messages before loading history
+            const area = document.getElementById('message-area');
+            area.innerHTML = '';
+            const input = document.getElementById('message-input');
+            input.placeholder = '输入你的发言... (Ctrl+Enter 发送)';
+            const data = await api(`/discussions/${filename}`);
+            showLoading(false);
+            if (data && data.messages) {
+                data.messages.forEach(msg => appendMessage(msg));
+                // 设置话题
+                if (data.topic && data.topic !== '未知主题') {
+                    setCurrentTopic(data.topic, {
+                        statusLabel: '历史讨论',
+                        statusMeta: data.ended_at ? `已归档于 ${formatDateTime(data.ended_at)}` : '历史讨论记录',
+                        tip: '你可以搜索、筛选和导出这场讨论，但新的发言不会写回这份历史记录。'
+                    });
+                    updateHeaderTitle(data.topic, true, '历史讨论');
+                }
+            }
+        }
+
+        async function deleteDiscussion(filename) {
+            if (!confirm('确定要删除这个讨论吗？删除后无法恢复。')) {
+                return;
+            }
+
+            const result = await api('/api/discussion/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename })
+            });
+
+            if (result && result.success) {
+                showNotification('讨论已删除', 'success');
+                if (currentHistoryFilename === filename) {
+                    currentHistoryFilename = null;
+                }
+                loadHistoryList();  // 刷新列表
+            } else {
+                showNotification('删除失败: ' + (result?.error || '未知错误'), 'error');
+            }
+        }
+
+        function toggleDiscussionSelection(filename) {
+            if (selectedDiscussions.has(filename)) {
+                selectedDiscussions.delete(filename);
+            } else {
+                selectedDiscussions.add(filename);
+            }
+            updateHistoryItemStyle(filename);
+            updateDeleteSelectedButton();
+        }
+
+        function updateHistoryItemStyle(filename) {
+            const safeFilename = window.CSS && CSS.escape ? CSS.escape(filename) : filename.replace(/"/g, '\\"');
+            const item = document.querySelector(`.history-item[data-filename="${safeFilename}"]`);
+            if (item) {
+                item.classList.toggle('selected', selectedDiscussions.has(filename));
+            }
+        }
+
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('select-all-history');
+            const checkboxes = document.querySelectorAll('.history-checkbox');
+
+            if (selectAllCheckbox.checked) {
+                checkboxes.forEach(cb => {
+                    const filename = cb.closest('.history-item').dataset.filename;
+                    selectedDiscussions.add(filename);
+                });
+            } else {
+                selectedDiscussions.clear();
+            }
+
+            checkboxes.forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+                updateHistoryItemStyle(cb.closest('.history-item').dataset.filename);
+            });
+            updateDeleteSelectedButton();
+        }
+
+        function updateDeleteSelectedButton() {
+            const btn = document.getElementById('btn-delete-selected');
+            if (selectedDiscussions.size > 0) {
+                btn.style.display = '';
+                btn.textContent = `🗑️ 删除选中 (${selectedDiscussions.size})`;
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        function renderHistoryEmpty(title, desc) {
+            return `
+                <div class="history-empty">
+                    <strong>${escapeHTML(title)}</strong>
+                    <span>${escapeHTML(desc)}</span>
+                </div>
+            `;
+        }
+
+        function renderHistorySummary(discussions) {
+            const summary = document.getElementById('history-summary');
+            if (!summary) return;
+
+            if (!discussions.length) {
+                summary.innerHTML = '';
+                return;
+            }
+
+            const totalMessages = discussions.reduce((sum, item) => sum + (item.message_count || 0), 0);
+            const latestStartedAt = discussions[0]?.started_at || '';
+
+            summary.innerHTML = `
+                <div class="history-stat">
+                    <div class="history-stat-label">讨论总数</div>
+                    <div class="history-stat-value">${discussions.length}</div>
+                </div>
+                <div class="history-stat">
+                    <div class="history-stat-label">累计消息</div>
+                    <div class="history-stat-value">${totalMessages}</div>
+                </div>
+                <div class="history-stat">
+                    <div class="history-stat-label">最近一次讨论</div>
+                    <div class="history-stat-value">${escapeHTML(formatDateTime(latestStartedAt))}</div>
+                </div>
+            `;
+        }
+
+        function renderHistoryList(discussions) {
+            const list = document.getElementById('history-list');
+            if (!discussions.length) {
+                list.innerHTML = renderHistoryEmpty('没有匹配结果', '换个关键词试试，或者清空搜索条件。');
+                return;
+            }
+
+            list.innerHTML = discussions.map(d => {
+                const topic = trimPreview(d.topic || '未命名话题', 80);
+                const preview = trimPreview(d.preview || '暂无摘要，打开后可查看完整内容。', 180);
+                const isSelected = selectedDiscussions.has(d.filename);
+                const isActive = currentHistoryFilename === d.filename;
+
+                return `
+                    <div class="history-item ${isSelected ? 'selected' : ''} ${isActive ? 'active-history' : ''}" data-filename="${escapeHTML(d.filename)}">
+                        <input type="checkbox" class="history-checkbox" onclick="event.stopPropagation(); toggleDiscussionSelection('${escapeJS(d.filename)}')" ${isSelected ? 'checked' : ''}>
+                        <div class="history-info" onclick="loadDiscussion('${escapeJS(d.filename)}')">
+                            <div class="history-topic-row">
+                                <span class="history-badge">${(d.message_count || 0)} 条消息</span>
+                                <span class="history-badge">${escapeHTML(formatDuration(d.duration_seconds))}</span>
+                            </div>
+                            <div class="history-name">${escapeHTML(topic)}</div>
+                            <div class="history-meta">
+                                <span>开始于 ${escapeHTML(formatDateTime(d.started_at))}</span>
+                                <span>${d.ended_at ? `结束于 ${escapeHTML(formatDateTime(d.ended_at))}` : '进行中或未记录结束时间'}</span>
+                            </div>
+                            <div class="history-preview">${escapeHTML(preview)}</div>
+                            <div class="history-filename">${escapeHTML(d.filename)}</div>
+                        </div>
+                        <span class="history-arrow">→</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function initHistorySearch() {
+            const input = document.getElementById('history-search');
+            if (!input) return;
+
+            input.addEventListener('input', () => {
+                const query = input.value.toLowerCase().trim();
+                if (!query) {
+                    renderHistorySummary(historyDiscussions);
+                    renderHistoryList(historyDiscussions);
+                    return;
+                }
+
+                const filtered = historyDiscussions.filter(item => {
+                    return [item.topic, item.preview, item.filename, item.started_at]
+                        .some(value => String(value || '').toLowerCase().includes(query));
+                });
+
+                renderHistorySummary(filtered);
+                renderHistoryList(filtered);
+            });
+        }
+
+        async function deleteSelectedDiscussions() {
+            if (selectedDiscussions.size === 0) return;
+
+            const count = selectedDiscussions.size;
+            if (!confirm(`确定要删除选中的 ${count} 个讨论吗？删除后无法恢复。`)) {
+                return;
+            }
+
+            const filenames = Array.from(selectedDiscussions);
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const filename of filenames) {
+                const result = await api('/api/discussion/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename })
+                });
+                if (result && result.success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            }
+
+            if (filenames.includes(currentHistoryFilename)) {
+                currentHistoryFilename = null;
+            }
+
+            if (failCount === 0) {
+                showNotification(`已删除 ${successCount} 个讨论`, 'success');
+            } else {
+                showNotification(`删除完成: ${successCount} 成功, ${failCount} 失败`, 'error');
+            }
+
+            loadHistoryList();
+        }
+
+        // Notification
+        function showNotification(message, type = 'success') {
+            const notif = document.getElementById('notification');
+            const content = document.getElementById('notification-content');
+            content.textContent = message;
+            notif.className = `notification ${type} show`;
+            setTimeout(() => notif.classList.remove('show'), 3000);
+        }
+
+        // Loading
+        function showLoading(show = true) {
+            document.getElementById('message-loading').style.display = show ? 'flex' : 'none';
+        }
+
+        // Controls
+        async function startDiscussion() {
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+            if (!content) return;
+
+            const btn = document.getElementById('btn-send');
+            const originalBtn = btn.innerHTML;
+            btn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,0.35);border-top-color:#fff;"></div><span class="send-button-copy"><span class="send-button-title">创建中</span><span class="send-button-subtitle">正在保存讨论主题</span></span>';
+            btn.disabled = true;
+
+            const result = await api('/api/discussion/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic: content })
+            });
+
+            btn.innerHTML = originalBtn;
+            btn.disabled = false;
+
+            if (result && result.success) {
+                input.value = '';
+                document.getElementById('btn-start-ai').style.display = 'inline-flex';
+                setCurrentTopic(content, {
+                    statusLabel: '话题已创建',
+                    statusMeta: '现在可以继续发言，或立即启动 AI 对话',
+                    tip: '如果想让讨论更快展开，下一步可以点击“开始AI对话”。'
+                });
+                autoResize();
+            }
+        }
+
+        async function startAIAConversation() {
+            // 如果正在结束讨论，不执行启动
+            if (isEndingInProgress) {
+                showNotification('正在结束讨论中，请稍候...', 'warning');
+                return;
+            }
+            const btn = document.getElementById('btn-start-ai');
+            if (!btn || btn.disabled) return; // 防止重复点击
+            const originalBtn = btn.innerHTML;
+            btn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;border-width:2px;"></div><span class="inline-action-copy"><span class="inline-action-title">启动中</span><span class="inline-action-subtitle">正在唤起 AI 对话</span></span>';
+            btn.disabled = true;
+
+            const result = await api('/api/discussion/start-ai', { method: 'POST' });
+
+            if (result && result.success) {
+                btn.style.display = 'none';
+                document.getElementById('btn-end').style.display = 'none';
+                document.getElementById('btn-pause-ai').style.display = 'inline-flex';
+                // 立刻更新轮询服务状态
+                const pollDot = document.getElementById('poll-status');
+                const pollText = document.getElementById('poll-status-text');
+                pollDot.className = 'status-indicator online';
+                pollText.textContent = '运行中';
+                // 显示 AI 正在思考
+                showAIThinking();
+                showNotification('AI 对话已启动', 'success');
+            } else {
+                btn.innerHTML = originalBtn;
+                btn.disabled = false;
+                showNotification('启动失败: ' + (result?.error || '未知错误'), 'error');
+            }
+        }
+
+        async function endDiscussion() {
+            // 检查是否有消息
+            const messages = document.querySelectorAll('.message');
+            if (messages.length === 0) {
+                showNotification('空白对话无法归档', 'warning');
+                return;
+            }
+
+            // 设置标志，防止 checkStatus 轮询干扰
+            isEndingInProgress = true;
+
+            // 保存所有按钮的引用
+            const endBtn = document.getElementById('btn-end');
+            const pauseBtn = document.getElementById('btn-pause-ai');
+            const startBtn = document.getElementById('btn-start-ai');
+
+            // 保存当前被点击的按钮（endBtn 或 pauseBtn）
+            const activeBtn = pauseBtn.style.display !== 'none' ? pauseBtn : endBtn;
+
+            // 保存所有按钮的原始状态
+            const endBtnOriginalHTML = endBtn.innerHTML;
+            const pauseBtnOriginalHTML = pauseBtn.innerHTML;
+            const endBtnOriginalDisplay = endBtn.style.display;
+            const pauseBtnOriginalDisplay = pauseBtn.style.display;
+            const startBtnOriginalDisplay = startBtn.style.display;
+
+            // 禁用所有操作按钮，防止重复点击
+            endBtn.disabled = true;
+            pauseBtn.disabled = true;
+            startBtn.disabled = true;
+
+            // 超时处理 - 10秒超时
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('请求超时，请检查服务器')), 10000);
+            });
+
+            const apiPromise = api('/api/discussion/end', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}'
+            });
+
+            let result;
+            try {
+                result = await Promise.race([apiPromise, timeoutPromise]);
+            } catch (error) {
+                // 超时或请求失败，恢复按钮状态
+                endBtn.innerHTML = endBtnOriginalHTML;
+                endBtn.style.display = endBtnOriginalDisplay;
+                endBtn.disabled = false;
+                pauseBtn.innerHTML = pauseBtnOriginalHTML;
+                pauseBtn.style.display = pauseBtnOriginalDisplay;
+                pauseBtn.disabled = false;
+                startBtn.style.display = startBtnOriginalDisplay;
+                startBtn.disabled = false;
+                showNotification('结束失败: ' + error.message, 'error');
+                isEndingInProgress = false;
+                return;
+            }
+
+            if (result && result.success) {
+                // 立即更新 UI，不再等待 checkStatus() 轮询
+                hideAIThinking();
+                startBtn.style.display = 'inline-flex';
+                startBtn.disabled = false;
+                endBtn.style.display = 'none';
+                endBtn.disabled = false;
+                pauseBtn.style.display = 'none';
+                pauseBtn.disabled = false;
+                resetCurrentTopic();
+                updateHeaderTitle('', false, '已结束');
+                const pollDot = document.getElementById('poll-status');
+                const pollText = document.getElementById('poll-status-text');
+                pollDot.className = 'status-indicator';
+                pollText.textContent = '停止';
+                // 重置输入框占位符为主题输入模式
+                document.getElementById('message-input').placeholder = '输入讨论主题... (Ctrl+Enter 发送)';
+                showNotification('对话已归档', 'success');
+            } else {
+                // 恢复按钮状态
+                endBtn.innerHTML = endBtnOriginalHTML;
+                endBtn.style.display = endBtnOriginalDisplay;
+                endBtn.disabled = false;
+                pauseBtn.innerHTML = pauseBtnOriginalHTML;
+                pauseBtn.style.display = pauseBtnOriginalDisplay;
+                pauseBtn.disabled = false;
+                startBtn.style.display = startBtnOriginalDisplay;
+                startBtn.disabled = false;
+                showNotification('结束失败: ' + (result?.error || '未知错误'), 'error');
+            }
+            // 清除标志
+            isEndingInProgress = false;
+        }
+
+        // Status check
+        async function checkStatus() {
+            const data = await api('/api/status');
+            if (data) {
+                const serverDot = document.getElementById('server-status');
+                const serverText = document.getElementById('server-status-text');
+                serverDot.className = 'status-indicator online';
+                serverText.textContent = '在线';
+
+                const pollDot = document.getElementById('poll-status');
+                const pollText = document.getElementById('poll-status-text');
+                const input = document.getElementById('message-input');
+
+                if (data.poll_running) {
+                    pollDot.className = 'status-indicator online';
+                    pollText.textContent = '运行中';
+                    // 同步按钮状态（如果在结束操作中，跳过按钮更新）
+                    if (!isEndingInProgress) {
+                        document.getElementById('btn-start-ai').style.display = 'none';
+                        document.getElementById('btn-end').style.display = 'none';
+                        document.getElementById('btn-pause-ai').style.display = 'inline-flex';
+                    }
+                    // 有活跃讨论时，切换到发言模式
+                    if (data.discussion_active) {
+                        input.placeholder = '输入你的发言... (Ctrl+Enter 发送)';
+                    }
+                } else {
+                    pollDot.className = 'status-indicator';
+                    pollText.textContent = '停止';
+                    // 同步按钮状态
+                    document.getElementById('btn-start-ai').style.display = 'inline-flex';
+                    // 只有在有活跃讨论时才显示结束按钮
+                    document.getElementById('btn-end').style.display = data.discussion_active ? 'inline-flex' : 'none';
+                    document.getElementById('btn-pause-ai').style.display = 'none';
+                }
+
+                // 如果有话题但无轮询，说明话题已创建还未启动AI，保持发言模式
+                if (data.current_topic && !data.poll_running) {
+                    input.placeholder = '输入你的发言... (Ctrl+Enter 发送)';
+                }
+
+                // 如果没有话题，恢复主题输入模式
+                if (!data.current_topic && !data.discussion_active) {
+                    input.placeholder = '输入讨论主题... (Ctrl+Enter 发送)';
+                }
+
+                 if (data.current_topic) {
+                    setCurrentTopic(data.current_topic, {
+                        statusLabel: data.poll_running ? 'AI 对话进行中' : '等待 AI 启动',
+                        statusMeta: data.poll_running ? 'Claude 与 Hermes 正在围绕当前主题展开讨论' : '话题已创建，你可以继续补充，或点击开始AI对话',
+                        tip: data.poll_running
+                            ? '你仍然可以插入自己的观点，新的发言会继续参与后续讨论。'
+                            : '如果主题已经定了，下一步建议直接启动 AI 对话。'
+                    });
+                } else if (!data.discussion_active) {
+                    resetCurrentTopic();
+                }
+            } else {
+                document.getElementById('server-status').className = 'status-indicator error';
+                document.getElementById('server-status-text').textContent = '离线';
+            }
+        }
+
+        // Char counter
+        function updateCharCount() {
+            const input = document.getElementById('message-input');
+            const counter = document.getElementById('char-count');
+            counter.textContent = input.value.length;
+        }
+
+        // Auto-resize textarea
+        function autoResize() {
+            const input = document.getElementById('message-input');
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 200) + 'px';
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            initSSE();
+            initSearch();
+            initHistorySearch();
+            initFilters();
+            checkStatus();
+            loadAINames();
+            setInterval(checkStatus, 10000);
+
+            // Navigation
+            document.getElementById('nav-history').addEventListener('click', showHistory);
+            document.getElementById('nav-chat').addEventListener('click', hideHistory);
+            document.getElementById('btn-close-history').addEventListener('click', hideHistory);
+
+            // Buttons
+            document.getElementById('btn-start-ai').addEventListener('click', startAIAConversation);
+            document.getElementById('btn-end').addEventListener('click', endDiscussion);
+            document.getElementById('btn-pause-ai').addEventListener('click', endDiscussion);
+            document.getElementById('btn-send').addEventListener('click', async () => {
+                const input = document.getElementById('message-input');
+                const content = input.value.trim();
+                if (!content) return;
+
+                // 检查是否已初始化话题
+                const isTopicSet = currentTopicActive;
+
+                if (!isTopicSet) {
+                    await startDiscussion();
+                    input.placeholder = '输入你的发言... (Ctrl+Enter 发送)';
+                    showNotification('话题已创建，可开始AI对话', 'success');
+                    return;
+                }
+
+                // 发送消息
+                const msg = await api('/api/message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ author: '用户', content })
+                });
+                if (!msg) {
+                    showNotification('发送失败', 'error');
+                } else {
+                    input.value = '';
+                    updateCharCount();
+                    autoResize();
+                    refreshMessageView();
+                    // 显示 AI 正在思考
+                    showAIThinking();
+                }
+            });
+
+            // Input
+            const input = document.getElementById('message-input');
+            input.addEventListener('input', () => {
+                updateCharCount();
+                autoResize();
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('btn-send').click();
+                }
+            });
+
+            // Export
+            document.getElementById('btn-export').addEventListener('click', async () => {
+                const messages = document.querySelectorAll('.message');
+                if (messages.length === 0) {
+                    showNotification('没有对话内容可导出', 'warning');
+                    return;
+                }
+                let content = '# Hermes × Claude 对话导出\n\n';
+                const msgList = [];
+                messages.forEach(msg => {
+                    const author = msg.querySelector('.message-author').textContent;
+                    const layer = msg.querySelector('.message-layer').textContent;
+                    const text = msg.dataset.content || '';
+                    content += `## ${author} (${layer})\n\n${text}\n\n---\n\n`;
+                    msgList.push({ author, layer, text });
+                });
+
+                // 获取话题
+                const topic = getCurrentTopicText();
+
+                // 调用服务端 API 导出
+                const result = await api('/api/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic, content })
+                });
+
+                if (result && result.success) {
+                    showNotification('对话已导出到 output 文件夹', 'success');
+                } else {
+                    showNotification('导出失败: ' + (result?.error || '未知错误'), 'error');
+                }
+            });
+
+            // Claude 总结
+            document.getElementById('btn-claude-summary').addEventListener('click', async () => {
+                const messages = document.querySelectorAll('.message');
+                if (messages.length === 0) {
+                    showNotification('没有对话内容可总结', 'warning');
+                    return;
+                }
+                // 收集所有消息
+                let messagesContent = '';
+                messages.forEach(msg => {
+                    const author = msg.querySelector('.message-author').textContent || '';
+                    const layer = msg.querySelector('.message-layer').textContent || '';
+                    const text = msg.dataset.content || '';
+                    messagesContent += `[${author} ${layer}]: ${text}\n\n`;
+                });
+                const topic = getCurrentTopicText();
+
+                showNotification('正在生成 Claude 总结...', 'info');
+                const result = await api('/api/summary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic, ai_type: 'claude', messages_content: messagesContent })
+                });
+                if (result && result.success) {
+                    showNotification('Claude 总结已导出到 output 文件夹', 'success');
+                } else {
+                    showNotification('总结失败: ' + (result?.error || '未知错误'), 'error');
+                }
+            });
+
+            // Hermes 总结
+            document.getElementById('btn-hermes-summary').addEventListener('click', async () => {
+                const messages = document.querySelectorAll('.message');
+                if (messages.length === 0) {
+                    showNotification('没有对话内容可总结', 'warning');
+                    return;
+                }
+                // 收集所有消息
+                let messagesContent = '';
+                messages.forEach(msg => {
+                    const author = msg.querySelector('.message-author').textContent || '';
+                    const layer = msg.querySelector('.message-layer').textContent || '';
+                    const text = msg.dataset.content || '';
+                    messagesContent += `[${author} ${layer}]: ${text}\n\n`;
+                });
+                const topic = getCurrentTopicText();
+
+                showNotification('正在生成 Hermes 总结...', 'info');
+                const result = await api('/api/summary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic, ai_type: 'hermes', messages_content: messagesContent })
+                });
+                if (result && result.success) {
+                    showNotification('Hermes 总结已导出到 output 文件夹', 'success');
+                } else {
+                    showNotification('总结失败: ' + (result?.error || '未知错误'), 'error');
+                }
+            });
+
+            resetCurrentTopic();
+            updateCharCount();
+            refreshMessageView();
+        });
+    </script>
+</body>
+</html>
