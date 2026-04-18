@@ -169,18 +169,17 @@ async def check_rate_limit(request: Request) -> bool:
 
 # 全局 asyncio.Event：watchdog 检测到文件变化时设置，所有 SSE 连接共享
 _file_changed_event: Optional[asyncio.Event] = None
+_main_loop: Optional[asyncio.AbstractEventLoop] = None  # 保存主线程 Event Loop（跨线程安全访问）
 _watchdog_started = False
 
 
 def _on_bridge_file_changed() -> None:
-    """watchdog 回调：通知所有 SSE 协程文件已变化（线程安全）"""
-    global _file_changed_event
-    if _file_changed_event is not None:
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return
-        loop.call_soon_threadsafe(_file_changed_event.set)
+    """watchdog 回调：通知所有 SSE 协程文件已变化（跨线程安全）"""
+    global _file_changed_event, _main_loop
+    if _file_changed_event is not None and _main_loop is not None:
+        if not _main_loop.is_closed():
+            # 使用保存的主 loop 安全地跨线程触发事件
+            _main_loop.call_soon_threadsafe(_file_changed_event.set)
 
 
 class _WatchdogHandler:
@@ -305,8 +304,9 @@ async def lifespan(app: FastAPI):
     # 启动 watchdog
     _start_watchdog()
 
-    # 初始化全局 SSE 事件（在 asyncio 主线程中创建）
-    global _file_changed_event
+    # 初始化全局 SSE 事件，并捕获主事件循环供 watchdog 线程回调使用
+    global _file_changed_event, _main_loop
+    _main_loop = asyncio.get_running_loop()
     _file_changed_event = asyncio.Event()
 
     # 注册信号处理
