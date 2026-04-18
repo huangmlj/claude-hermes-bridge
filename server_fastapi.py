@@ -472,13 +472,13 @@ async def discussion_list(req_ctx: Request):
         return _error_response("Too Many Requests", 429)
 
     result = await asyncio.to_thread(svc_list_discussions)
-    return _json_response(result)
+    return _json_response({"discussions": result})
 
 
 @app.get("/api/discussion/list")
 async def discussion_list_get(req_ctx: Request):
     result = await asyncio.to_thread(svc_list_discussions)
-    return _json_response(result)
+    return _json_response({"discussions": result})
 
 
 @app.get("/discussions/{filename}")
