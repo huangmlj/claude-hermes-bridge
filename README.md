@@ -12,6 +12,30 @@ AI 思想碰撞平台 - Claude 与 Hermes 的深度对话系统
 
 ## 更新日志
 
+### 2026-04-18 v2.2 - FastAPI 重构（可选）
+
+**架构升级**（server_fastapi.py）：
+- 路由层全面拥抱 FastAPI 装饰器，告别意大利面条式 `if self.path == ...`
+- SSE 改为 `sse-starlette` 异步生成器，彻底解决长连接线程瓶颈
+- Pydantic Schemas 替代手动 JSON 校验，输入验证更可靠
+- CORS/生命周期/限速全部中间件化
+
+**SSE 重写**：
+- 旧版：每个 SSE 连接一个线程 + `threading.Event` 等待
+- 新版：协程 + `asyncio.Event` 等待 + `watchdog` 文件变化回调唤醒，无线程阻塞
+- `EventSourceResponse` + `asyncio.to_thread` 包装所有同步文件 I/O
+
+**新增依赖**：`fastapi`, `uvicorn[standard]`, `pydantic>=2.0`, `sse-starlette`
+
+**启动方式**：
+```bash
+# FastAPI 版本（推荐）
+python3 -m uvicorn server_fastapi:app --host 0.0.0.0 --port 8765
+
+# 或使用启动脚本（已更新）
+bash start.sh
+```
+
 ### 2026-04-18 v2.1 - 性能优化
 
 **WAL 增量读取优化**（services/bridge.py）：

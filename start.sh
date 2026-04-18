@@ -1,18 +1,19 @@
 #!/bin/bash
-# Claude-Hermes Bridge 启动器（后台模式）
+# Claude-Hermes Bridge 启动器（后台模式 - FastAPI）
 
 cd "$(dirname "$0")"
 
 # 停止旧进程
 pkill -f "python3.*server.py" 2>/dev/null
+pkill -f "python3.*server_fastapi.py" 2>/dev/null
 pkill -f "python3.*poll_loop.py" 2>/dev/null
 pkill -f "vite" 2>/dev/null
 sleep 1
 
-echo "🚀 启动 Claude-Hermes Bridge..."
+echo "🚀 启动 Claude-Hermes Bridge (FastAPI)..."
 
-# 启动 HTTP 服务器（后台）
-nohup python3 server.py > server.log 2>&1 &
+# 启动 FastAPI 服务器（后台）
+nohup python3 -m uvicorn server_fastapi:app --host 0.0.0.0 --port 8765 > server.log 2>&1 &
 sleep 2
 
 # 检查服务器

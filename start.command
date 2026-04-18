@@ -4,15 +4,15 @@ cd "$BRIDGE_DIR"
 
 # 停止旧进程
 pkill -f "python3.*server.py" 2>/dev/null
-pkill -f "python3.*poll.py" 2>/dev/null
+pkill -f "python3.*server_fastapi.py" 2>/dev/null
 pkill -f "python3.*poll_loop.py" 2>/dev/null
 pkill -f "vite" 2>/dev/null
 sleep 1
 
-echo "🚀 启动 Claude-Hermes Bridge..."
+echo "🚀 启动 Claude-Hermes Bridge (FastAPI)..."
 
-# 启动 HTTP 服务器（后台）
-nohup python3 server.py > server.log 2>&1 &
+# 启动 FastAPI 服务器（后台）
+nohup python3 -m uvicorn server_fastapi:app --host 0.0.0.0 --port 8765 > server.log 2>&1 &
 sleep 2
 
 # 检查服务器
@@ -35,14 +35,7 @@ else
     echo "✅ Vite 已启动"
 fi
 
-# 后台启动 Hermes 和 Claude 轮询（不显示终端窗口）
-nohup python3 services/poll.py hermes >> poll_hermes.log 2>&1 &
-nohup python3 services/poll.py claude >> poll_claude.log 2>&1 &
-
-sleep 1
-
 echo ""
 echo "✅ 全部启动完成!"
 echo "🌐 访问 React 前端: http://localhost:5173"
-echo "🌐 访问旧版页面:    http://localhost:8765"
-echo "📝 日志文件: poll_hermes.log, poll_claude.log, vite.log"
+echo "📝 日志文件: server.log, vite.log"
