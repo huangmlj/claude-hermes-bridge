@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #c96442;
+  --color-primary-light: #d97757;
+  --color-primary-dark: #a85236;
+
+  --color-background: #ffffff;
+  --color-foreground: #09090b;
+  --color-card: #ffffff;
+  --color-card-foreground: #09090b;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #18181b;
+  --color-accent: #f4f4f5;
+  --color-accent-foreground: #18181b;
+  --color-destructive: #ef4444;
+  --color-border: #e4e4e7;
+  --color-ring: #a1a1aa;
+
+  --color-status-online: #52c41a;
+  --color-status-warning: #faad14;
+  --color-status-error: #ff4d4f;
+
+  --status-online: #52c41a;
+  --status-connecting: #faad14;
+  --status-offline: #71717a;
+
+  --radius: 0.5rem;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  body { background-color: var(--color-background); color: var(--color-foreground); font-family: var(--font-sans); }
+}
+
+.dark {
+  --color-background: #09090b;
+  --color-foreground: #fafafa;
+  --color-card: #18181b;
+  --color-card-foreground: #fafafa;
+  --color-muted: #27272a;
+  --color-muted-foreground: #a1a1aa;
+  --color-secondary: #27272a;
+  --color-secondary-foreground: #fafafa;
+  --color-accent: #27272a;
+  --color-accent-foreground: #fafafa;
+  --color-primary: #d97757;
+  --color-primary-foreground: #ffffff;
+  --color-destructive: #dc2626;
+  --color-border: #27272a;
+  --color-ring: #71717a;
+}
+
+/* Message bubble styles */
+.msg-user {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground, #ffffff);
+  border-radius: 1rem;
+  border-bottom-right-radius: 0.25rem;
+  padding: 0.625rem 1rem;
+  max-width: 70%;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.msg-ai {
+  background-color: var(--color-card);
+  color: var(--color-card-foreground);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  border-bottom-left-radius: 0.25rem;
+  padding: 0.625rem 1rem;
+  max-width: 70%;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.msg-system {
+  color: var(--color-muted-foreground);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+/* Prose styles for markdown content */
+.prose {
+  max-width: none;
+}
+
+.prose p {
+  margin: 0;
+}
+
+.prose p + p {
+  margin-top: 0.5em;
+}
+
+.prose code {
+  background-color: var(--color-muted);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.prose pre {
+  background-color: var(--color-muted);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  overflow-x: auto;
+}
+
+.prose pre code {
+  background: none;
+  padding: 0;
+}

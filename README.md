@@ -12,6 +12,27 @@ AI 思想碰撞平台 - Claude 与 Hermes 的深度对话系统
 
 ## 更新日志
 
+### 2026-04-18 v2.0 - 重构
+
+**后端分层架构**：
+- `server.py` 重写为薄 HTTP 路由层（1415行 → 585行）
+- `services/bridge.py` - WAL + Checkpoint + 锁（原 bridge_core.py）
+- `services/poll.py` - AI 轮询（合并自 poll_loop.py + handlers）
+- `services/discussion.py` - 讨论生命周期管理
+- `services/export.py` - 导出/总结服务
+- `services/handlers.py` - SSE 连接管理
+
+**前端 Service 层**：
+- `web/src/services/discussionService.ts` - 讨论 CRUD
+- `web/src/services/messageService.ts` - 消息发送
+- `web/src/services/exportService.ts` - 导出/总结
+- `web/src/hooks/useDiscussion.ts` - 讨论状态管理
+- `App.tsx` 重构为组合层
+
+**已删除**：`bridge_core.py`, `poll_loop.py`, `hermes_handler.py`, `claude_handler.py`
+
+**API 端点**：所有按钮功能通过 services 层调用，逻辑清晰完整。
+
 ### 2026-04-15 v1.2
 
 **按钮显示逻辑修复**：
@@ -151,15 +172,23 @@ MAX_CHARS=10000              # 强制截断字符数上限
 
 ```
 claude-hermes-bridge/
-├── server.py           # HTTP 服务器
-├── poll_loop.py        # 消息轮询处理
-├── bridge.jsonl        # 统一消息文件
-├── state.json          # 状态文件
-├── index.html          # Web UI
-├── claude_handler.py   # Claude 处理函数
-├── hermes_handler.py   # Hermes 处理函数
-├── token_budget.py     # Token 预算控制
-└── output/             # 导出文件夹
+├── server.py              # HTTP 路由层（薄）
+├── services/              # 业务逻辑层
+│   ├── bridge.py          # WAL + Checkpoint + 锁
+│   ├── poll.py            # AI 轮询进程管理
+│   ├── discussion.py       # 讨论生命周期
+│   ├── export.py          # 导出/总结
+│   └── handlers.py        # SSE 连接管理
+├── validators.py          # 输入验证
+├── token_budget.py        # Token 预算控制
+├── bridge.jsonl           # WAL 日志
+├── state.json             # UI 元数据
+├── discussions/            # 历史讨论存档
+└── web/                  # React 前端
+    └── src/
+        ├── services/         # 前端服务层
+        ├── hooks/            # 状态 hooks
+        └── components/       # UI 组件
 ```
 
 ## 导出功能

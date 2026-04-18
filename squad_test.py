@@ -15,8 +15,8 @@ from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from bridge_core import (
-    load_state, save_state, get_true_line_count, 
+from services.bridge import (
+    load_state, save_state, get_true_line_count,
     append_bridge, _read_checkpoint
 )
 

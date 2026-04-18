@@ -183,7 +183,7 @@ def sanitize_error_message(error: Exception) -> str:
     # 移除文件路径
     error_msg = re.sub(r'/[^\s]+', '[PATH]', error_msg)
     # 移除API密钥模式
-    error_msg = re.sub(r'sk-[a-zA-Z0-9]{48}', '[API_KEY]', error_msg)
+    error_msg = re.sub(r'sk-[a-zA-Z0-9]+', '[API_KEY]', error_msg)
     # 移除令牌模式
     error_msg = re.sub(r'[a-zA-Z0-9_-]{40,}', '[TOKEN]', error_msg)
 
@@ -210,7 +210,10 @@ def validate_json_request(handler, required_fields: list = None) -> Dict[str, An
             return None
 
         body = handler.rfile.read(content_length)
-        data = json.loads(body.decode('utf-8'))
+        if not body:
+            data = {}
+        else:
+            data = json.loads(body.decode('utf-8'))
 
         if required_fields:
             for field in required_fields:
