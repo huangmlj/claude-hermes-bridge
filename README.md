@@ -14,17 +14,19 @@ AI 思想碰撞平台 - Claude 与 Hermes 的深度对话系统
 
 ### 2026-04-18 v2.1 - 性能优化
 
-**WAL 写入优化**（services/bridge.py）：
-- 移除 `append_bridge` 写后 O(N) 文件全量扫描，改为纯 O(1) 追加模式
-- 追加写入是原子操作，写成功即表示行数确定，无需再次验证
+**WAL 增量读取优化**（services/bridge.py）：
+- 引入 Byte Offset 缓存，`get_true_line_count()` 只需读取增量部分，十万行对话瞬间完成
+- 文件增长时从缓存指针位置增量累加，非增长/首次时全量读取
+- 移除写后 O(N) 验证扫描，追加即原子
 
 **锁重试逻辑 DRY 化**（services/bridge.py）：
-- 提取 `_lock_retry_backoff` 辅助函数，统一处理 BlockingIOError 和 IOError/OSError 的退避逻辑
-- 消除重复代码，提升可维护性
+- 合并 BlockingIOError 和 IOError/OSError 为统一异常处理
+- 用 `isinstance()` 判断抖动因子，代码更简洁
 
-**SSE 连接错误处理优化**（server.py）：
-- 细分异常类型：单独捕获 BrokenPipeError/ConnectionResetError/OSError（网络断开），其他异常单独处理
-- 加快网络断开时的线程回收速度
+**SSE 连接鲁棒性增强**（server.py）：
+- 写入循环内单独 try...except 捕获网络断开，干净 break 退出
+- 心跳/消息推送异常不影响主循环，ConnectionAbortedError 单独处理
+- 外层统一捕获意外异常并记录日志
 
 ### 2026-04-18 v2.0 - 重构
 

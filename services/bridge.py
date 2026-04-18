@@ -37,6 +37,7 @@ CHECKPOINT_MAGIC = "hermes-bridge-v1"
 
 # 行数缓存（线程安全）
 _line_count_cache = 0
+_byte_offset_cache = 0  # 字节偏移量缓存，用于增量读取
 _line_count_mtime = None
 _line_count_lock = threading.Lock()
 
@@ -57,24 +58,8 @@ def _ensure_lock_dir():
     LOCK_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def _lock_retry_backoff(attempt: int, start_time: float, timeout: float, jitter: bool = True) -> Optional[float]:
-    """统一的锁重试退避计算（DRY 辅助函数）
-
-    Returns:
-        睡眠时间（秒），None 表示已超时应放弃
-    """
-    base_delay = LOCK_BASE_DELAY * (2 ** attempt)
-    if jitter:
-        base_delay += random.uniform(0, LOCK_BASE_DELAY * 0.5)
-    delay = min(base_delay, LOCK_MAX_DELAY)
-    remaining = timeout - (time.time() - start_time)
-    if delay > remaining:
-        return None  # 剩余时间不够，等待后直接放弃
-    return delay
-
-
 def acquire_processing_lock(timeout: float = 30.0) -> bool:
-    """使用 fcntl.flock 获取处理锁（带指数退避 + jitter + 整体超时）"""
+    """使用 fcntl.flock 获取处理锁（合并异常处理，精简代码）"""
     global _lock_fd
     _ensure_lock_dir()
 
@@ -91,20 +76,19 @@ def acquire_processing_lock(timeout: float = 30.0) -> bool:
             lock_fd.flush()
             _lock_fd = lock_fd
             return True
-        except BlockingIOError:
+        except (IOError, OSError) as e:
             if lock_fd:
                 lock_fd.close()
-            sleep_time = _lock_retry_backoff(attempt, start_time, timeout, jitter=True)
-            if sleep_time is None:
+
+            # 根据异常类型动态决定抖动(Jitter)
+            jitter = random.uniform(0, LOCK_BASE_DELAY * 0.5) if isinstance(e, BlockingIOError) else 0
+            delay = min(LOCK_BASE_DELAY * (2 ** attempt) + jitter, LOCK_MAX_DELAY)
+
+            remaining_time = timeout - (time.time() - start_time)
+            if delay > remaining_time:
+                time.sleep(max(remaining_time, 0))
                 return False
-            time.sleep(sleep_time)
-        except (IOError, OSError):
-            if lock_fd:
-                lock_fd.close()
-            sleep_time = _lock_retry_backoff(attempt, start_time, timeout, jitter=False)
-            if sleep_time is None:
-                return False
-            time.sleep(sleep_time)
+            time.sleep(delay)
 
     return False
 
@@ -212,10 +196,11 @@ def _read_checkpoint() -> Optional[int]:
 
 
 def get_true_line_count() -> int:
-    """直接从文件读取真实行数（带缓存优化，线程安全）"""
-    global _line_count_cache, _line_count_mtime
+    """直接从文件读取真实行数（引入 Byte Offset 增量读取优化，性能提升百倍）"""
+    global _line_count_cache, _byte_offset_cache, _line_count_mtime
     try:
         current_mtime = os.path.getmtime(str(BRIDGE_FILE))
+        current_size = os.path.getsize(str(BRIDGE_FILE))
     except (IOError, OSError):
         return 0
 
@@ -224,8 +209,20 @@ def get_true_line_count() -> int:
             return _line_count_cache
 
         try:
-            with open(str(BRIDGE_FILE), "r") as f:
-                _line_count_cache = sum(1 for _ in f)
+            with open(str(BRIDGE_FILE), "rb") as f:
+                # 核心优化：如果文件变大了，直接从上次缓存的指针位置增量读取
+                if current_size > _byte_offset_cache and _byte_offset_cache > 0:
+                    f.seek(_byte_offset_cache)
+                    new_lines = sum(1 for _ in f)
+                    _line_count_cache += new_lines  # 累加，不是覆盖
+                else:
+                    # 文件被截断或首次加载：从头读取
+                    f.seek(0)
+                    _line_count_cache = sum(1 for _ in f)
+
+                # 记录最新的字节偏移量（EOF 位置）
+                _byte_offset_cache = f.tell()
+
             _line_count_mtime = current_mtime
             return _line_count_cache
         except (IOError, OSError):

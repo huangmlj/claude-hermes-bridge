@@ -258,29 +258,30 @@ class BridgeHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 if sse_client.wait_for_event(timeout=25):
                     sse_client.clear_event()
 
-                # 心跳
-                heartbeat_count += 1
-                self.wfile.write(f": heartbeat {heartbeat_count}\n\n".encode('utf-8'))
-                self.wfile.flush()
+                try:
+                    # 心跳
+                    heartbeat_count += 1
+                    self.wfile.write(f": heartbeat {heartbeat_count}\n\n".encode('utf-8'))
+                    self.wfile.flush()
 
-                # 推送新消息
-                current_offset = _read_checkpoint() or 0
-                if current_offset > last_offset:
-                    new_messages = get_messages_since(last_offset)
-                    for msg in new_messages:
-                        last_offset += 1
-                        data = json.dumps(msg, ensure_ascii=False)
-                        self.wfile.write(f"id: {last_offset}\ndata: {data}\n\n".encode('utf-8'))
-                        self.wfile.flush()
+                    # 推送新消息
+                    current_offset = _read_checkpoint() or 0
+                    if current_offset > last_offset:
+                        new_messages = get_messages_since(last_offset)
+                        for msg in new_messages:
+                            last_offset += 1
+                            data = json.dumps(msg, ensure_ascii=False)
+                            self.wfile.write(f"id: {last_offset}\ndata: {data}\n\n".encode('utf-8'))
+                            self.wfile.flush()
 
-        except (BrokenPipeError, ConnectionResetError, OSError) as e:
-            # 网络断开：客户端已关闭连接，及时回收线程
-            logger.debug(f"SSE client connection lost: {e.__class__.__name__}")
+                except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+                    # 客户端主动断开连接，属于正常现象，干净退出循环
+                    logger.info("SSE client gracefully disconnected.")
+                    break
+
         except Exception as e:
-            # 意外异常（如 SystemExit、KeyboardInterrupt 之外的错误）
-            logger.warning(f"SSE stream unexpected error: {e}")
+            logger.error(f"SSE stream encountered an unexpected error: {e}")
         finally:
-            # 保证客户端注销，无论何种路径退出
             unregister_sse_client(sse_client)
 
     # -------------------------------------------------------------------------
