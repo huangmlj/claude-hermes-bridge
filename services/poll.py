@@ -353,10 +353,19 @@ def run_poll_loop(agent_name: str, poll_interval: float = POLL_INTERVAL) -> None
     def process_messages():
         """处理新消息"""
         try:
-            current_state = load_state()
-            last_writer = current_state.get("last_write_by")
+            # 1. 先抢锁，抢不到说明其他进程在处理，直接退出
+            if not acquire_processing_lock():
+                return
 
-            if last_writer is not None and last_writer != agent_name:
+            try:
+                # 2. 【核心修复】：拿到锁后，重新读取最新状态
+                current_state = load_state()
+                last_writer = current_state.get("last_write_by")
+
+                # 如果最新状态已经是自己写的了，说明其他进程已处理过，跳过
+                if last_writer == agent_name:
+                    return
+
                 current_offset = _read_checkpoint()
                 if current_offset is None:
                     current_offset = get_true_line_count()
@@ -365,51 +374,45 @@ def run_poll_loop(agent_name: str, poll_interval: float = POLL_INTERVAL) -> None
 
                 if last_entry:
                     layer = last_entry.get('layer', 0)
+                    logger.info(f"{agent_name} processing message from {last_writer}")
+                    logger.debug(f"Layer {layer}: {last_entry['content'][:80]}...")
 
-                    if not acquire_processing_lock():
-                        logger.debug(f"{agent_name} skipped Layer {layer} (lock failed)")
-                        return
+                    response = handler_fn(last_entry)
 
-                    try:
-                        logger.info(f"{agent_name} processing message from {last_writer}")
-                        logger.debug(f"Layer {layer}: {last_entry['content'][:80]}...")
+                    if response:
+                        new_layer = last_entry['layer'] + 1
+                        timestamp = datetime.now().isoformat()
+                        entry = {
+                            "layer": new_layer,
+                            "author": agent_name,
+                            "content": response,
+                            "timestamp": timestamp,
+                            "id": generate_message_id(agent_name, response, timestamp)
+                        }
 
-                        response = handler_fn(last_entry)
+                        new_offset = append_bridge(entry, update_checkpoint=True)
 
-                        if response:
-                            new_layer = last_entry['layer'] + 1
-                            timestamp = datetime.now().isoformat()
-                            entry = {
-                                "layer": new_layer,
-                                "author": agent_name,
-                                "content": response,
-                                "timestamp": timestamp,
-                                "id": generate_message_id(agent_name, response, timestamp)
-                            }
-
-                            new_offset = append_bridge(entry, update_checkpoint=True)
-
-                            if new_offset:
-                                true_count = get_true_line_count()
-                                current_state["current_layer"] = new_layer
-                                current_state["last_write_by"] = agent_name
-                                current_state["bridge_line_count"] = true_count
-                                if agent_name == "claude":
-                                    current_state["claude_last_read"] = true_count
-                                else:
-                                    current_state["hermes_last_read"] = true_count
-                                save_state(current_state)
-                                mark_processed(new_offset)
-                                logger.info(f"{agent_name} replied at Layer {new_layer}")
-                                logger.debug(f"Response preview: {response[:80]}...")
+                        if new_offset:
+                            true_count = get_true_line_count()
+                            current_state["current_layer"] = new_layer
+                            current_state["last_write_by"] = agent_name
+                            current_state["bridge_line_count"] = true_count
+                            if agent_name == "claude":
+                                current_state["claude_last_read"] = true_count
                             else:
-                                logger.error(f"{agent_name} append failed, state unchanged")
+                                current_state["hermes_last_read"] = true_count
+                            save_state(current_state)
+                            mark_processed(new_offset)
+                            logger.info(f"{agent_name} replied at Layer {new_layer}")
+                            logger.debug(f"Response preview: {response[:80]}...")
                         else:
-                            logger.warning(f"{agent_name} handler returned empty response, marking as processed to avoid repeat")
-                            mark_processed(current_offset)
+                            logger.error(f"{agent_name} append failed, state unchanged")
+                    else:
+                        logger.warning(f"{agent_name} handler returned empty response, marking as processed to avoid repeat")
+                        mark_processed(current_offset)
 
-                    finally:
-                        release_processing_lock()
+            finally:
+                release_processing_lock()
 
         except Exception as e:
             logger.error(f"Error in process_messages: {e}")

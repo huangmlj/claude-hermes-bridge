@@ -156,6 +156,11 @@ async def check_rate_limit(request: Request) -> bool:
             t for t in _rate_limit[client_ip] if now - t < RATE_WINDOW
         ]
 
+        # 列表为空时释放字典内存，防止无限膨胀
+        if not _rate_limit[client_ip]:
+            del _rate_limit[client_ip]
+            return True
+
         if len(_rate_limit[client_ip]) >= RATE_MAX:
             return False
 

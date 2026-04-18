@@ -41,8 +41,8 @@ _byte_offset_cache = 0  # 字节偏移量缓存，用于增量读取
 _line_count_mtime = None
 _line_count_lock = threading.Lock()
 
-# 写入锁：保护 append_bridge 的读-写-更新原子性
-_append_lock = threading.Lock()
+# 追加写入专用文件锁（跨进程保护，不同于处理锁）
+_APPEND_LOCK_FILE = _BRIDGE_DIR / ".append_lock"
 
 # 锁配置
 LOCK_MAX_RETRIES = 5
@@ -381,39 +381,47 @@ def append_bridge(entry: Dict[str, Any], update_checkpoint: bool = True, max_ret
     """
     line = json.dumps(entry, ensure_ascii=False) + "\n"
 
-    with _append_lock:
-        for attempt in range(max_retries):
-            try:
-                if update_checkpoint:
-                    # O(1)：直接从 checkpoint 读取，不需要文件扫描
-                    current_offset = _read_checkpoint()
-                    if current_offset is None:
-                        current_offset = get_true_line_count()
-                    lines_before = current_offset
-                else:
-                    # 无 checkpoint：只在首次获取行数用于返回值
-                    lines_before = get_true_line_count()
+    # 使用文件锁替代 threading.Lock（跨进程保护）
+    lock_fd = open(_APPEND_LOCK_FILE, "w")
+    try:
+        fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)  # 阻塞式独占锁
+        try:
+            for attempt in range(max_retries):
+                try:
+                    if update_checkpoint:
+                        # O(1)：直接从 checkpoint 读取，不需要文件扫描
+                        current_offset = _read_checkpoint()
+                        if current_offset is None:
+                            current_offset = get_true_line_count()
+                        lines_before = current_offset
+                    else:
+                        # 无 checkpoint：只在首次获取行数用于返回值
+                        lines_before = get_true_line_count()
 
-                with open(str(BRIDGE_FILE), "a", encoding='utf-8') as f:
-                    f.write(line)
-                    f.flush()
-                    os.fsync(f.fileno())
+                    with open(str(BRIDGE_FILE), "a", encoding='utf-8') as f:
+                        f.write(line)
+                        f.flush()
+                        os.fsync(f.fileno())
 
-                # 追加写入是原子操作——写入成功即表示 lines_before+1，无需再扫文件
-                new_offset = lines_before + 1
-                if update_checkpoint:
-                    _update_checkpoint(new_offset)
-                return new_offset
+                    # 追加写入是原子操作——写入成功即表示 lines_before+1，无需再扫文件
+                    new_offset = lines_before + 1
+                    if update_checkpoint:
+                        _update_checkpoint(new_offset)
+                    return new_offset
 
-            except (IOError, OSError) as e:
-                if attempt < max_retries - 1:
-                    delay = min(0.1 * (2 ** attempt) + random.uniform(0, 0.05), 1.0)
-                    time.sleep(delay)
-                else:
-                    print(f"❌ append_bridge failed after {max_retries} attempts: {e}")
-                    return None
+                except (IOError, OSError) as e:
+                    if attempt < max_retries - 1:
+                        delay = min(0.1 * (2 ** attempt) + random.uniform(0, 0.05), 1.0)
+                        time.sleep(delay)
+                    else:
+                        print(f"❌ append_bridge failed after {max_retries} attempts: {e}")
+                        return None
 
-        return None
+            return None
+        finally:
+            fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)  # 释放锁
+    finally:
+        lock_fd.close()
 
 
 def mark_processed(up_to_offset: int) -> None:

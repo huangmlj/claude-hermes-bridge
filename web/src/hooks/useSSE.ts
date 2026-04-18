@@ -28,7 +28,7 @@ export function useSSE(
       connectionTimerRef.current = undefined
     }
     if (reconnectTimer.current) {
-      clearTimeout(reconnectTimer.current)
+      clearInterval(reconnectTimer.current)
       reconnectTimer.current = undefined
     }
   }, [])
@@ -93,9 +93,13 @@ export function useSSE(
 
     setReconnectIn(Math.ceil(totalDelay / 1000))
 
-    reconnectTimer.current = setTimeout(() => {
+    reconnectTimer.current = setInterval(() => {
       setReconnectIn(prev => {
-        if (prev <= 1) { connect() }
+        if (prev <= 1) {
+          if (reconnectTimer.current) clearInterval(reconnectTimer.current)
+          connect()
+          return 0
+        }
         return prev - 1
       })
     }, 1000)
