@@ -1,0 +1,46 @@
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+.secrets/
+
+# Logs
+*.log
+poll_*.log
+vite.log
+server.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyc
+
+# React build
+web/dist/
+web/node_modules/
+web/.vite/
+web/vite.log
+
+# OS files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Runtime files
+bridge.jsonl
+state.json
+.checkpoint
+
+# Discussions (user content - keep local only)
+discussions/
+
+# Output files
+output/
+
+# PID files
+*.pid
+
+# Editor
+.vscode/
+.idea/
