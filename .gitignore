@@ -44,3 +44,6 @@ output/
 # Editor
 .vscode/
 .idea/
+
+# OMC orchestration
+.omc/

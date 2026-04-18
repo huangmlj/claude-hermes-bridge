@@ -212,13 +212,14 @@ MAX_CHARS=10000              # 强制截断字符数上限
 
 ```
 claude-hermes-bridge/
-├── server.py              # HTTP 路由层（薄）
+├── server_fastapi.py      # FastAPI HTTP 服务器（推荐）
+├── server.py              # 旧版 http.server（已废弃）
 ├── services/              # 业务逻辑层
 │   ├── bridge.py          # WAL + Checkpoint + 锁
 │   ├── poll.py            # AI 轮询进程管理
-│   ├── discussion.py       # 讨论生命周期
+│   ├── discussion.py      # 讨论生命周期
 │   ├── export.py          # 导出/总结
-│   └── handlers.py        # SSE 连接管理
+│   └── handlers.py        # SSE 连接管理（仅旧版server.py使用）
 ├── validators.py          # 输入验证
 ├── token_budget.py        # Token 预算控制
 ├── bridge.jsonl           # WAL 日志
@@ -229,6 +230,7 @@ claude-hermes-bridge/
         ├── services/         # 前端服务层
         ├── hooks/            # 状态 hooks
         └── components/       # UI 组件
+```
 ```
 
 ## 导出功能
