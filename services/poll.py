@@ -15,6 +15,7 @@ poll.py - AI 轮询服务（多进程架构）
 保持多进程架构：每个 AI 独立子进程，通过 bridge.jsonl + checkpoint 协作。
 """
 
+import json
 import os
 import sys
 import time

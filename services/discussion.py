@@ -311,6 +311,15 @@ def _calc_duration(data: Dict) -> int:
 # 加载讨论
 # ---------------------------------------------------------------------------
 
+def _safe_filename(filename: str) -> str:
+    """严格校验文件名，防止路径遍历攻击"""
+    # 只允许字母、数字、短横线、下划线、点和空格
+    safe = ''.join(c for c in filename if c.isalnum() or c in '.-_ ')
+    if not safe or safe != filename:
+        raise ValueError(f"Invalid filename: {filename}")
+    return safe
+
+
 def load_discussion(filename: str) -> Dict[str, Any]:
     """加载讨论文件并更新后端状态
 
@@ -320,9 +329,18 @@ def load_discussion(filename: str) -> Dict[str, Any]:
     Returns:
         dict: {topic, messages, started_at, ended_at}
     """
-    filepath = ARCHIVE_DIR / filename
+    safe_name = _safe_filename(filename)
+    filepath = ARCHIVE_DIR / safe_name
+
+    # 二次验证：确保解析后的路径仍在 ARCHIVE_DIR 内（防御符号链接攻击）
     if not filepath.exists():
         raise FileNotFoundError(f"Discussion file not found: {filename}")
+    if not filepath.is_file():
+        raise ValueError(f"Not a file: {filename}")
+
+    # 使用 realpath 验证最终路径仍在 ARCHIVE_DIR 内
+    if not filepath.resolve().parent == ARCHIVE_DIR.resolve():
+        raise ValueError(f"Access denied: path outside discussions directory")
 
     with open(filepath, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -379,10 +397,18 @@ def delete_discussion(filename: str) -> Dict[str, Any]:
     """
     # 验证文件名
     safe_name = ''.join(c for c in filename if c.isalnum() or c in '.-_')
+    if not safe_name or safe_name != filename:
+        raise ValueError(f"Invalid filename: {filename}")
+
     filepath = ARCHIVE_DIR / safe_name
 
+    # 二次验证：确保解析后的路径仍在 ARCHIVE_DIR 内
     if not filepath.exists():
         raise FileNotFoundError(f"Discussion not found: {filename}")
+    if not filepath.is_file():
+        raise ValueError(f"Not a file: {filename}")
+    if not filepath.resolve().parent == ARCHIVE_DIR.resolve():
+        raise ValueError(f"Access denied: path outside discussions directory")
 
     # 不允许删除当前活跃讨论
     state = load_state()

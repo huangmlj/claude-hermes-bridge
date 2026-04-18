@@ -34,7 +34,8 @@ export function MessageInput({ onSend, onStartAI, disabled, loading, placeholder
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && e.ctrlKey) {
+    // Enter 发送，Shift+Enter 换行（符合主流聊天软件直觉）
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
     }

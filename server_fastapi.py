@@ -39,7 +39,7 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # 路径配置
@@ -113,6 +113,14 @@ class MessageRequest(BaseModel):
     content: str = Field(..., min_length=1)
     author: str = Field(default="user")
 
+    @field_validator("author")
+    @classmethod
+    def validate_author(cls, v: str) -> str:
+        allowed = {"user", "hermes", "claude"}
+        if v not in allowed:
+            raise ValueError(f"author must be one of {allowed}")
+        return v
+
 
 class DeleteDiscussionRequest(BaseModel):
     filename: str = Field(..., min_length=1)
@@ -126,6 +134,15 @@ class ExportRequest(BaseModel):
 class SummaryRequest(BaseModel):
     topic: str = Field(...)
     ai_type: str = Field(...)
+
+    @field_validator("ai_type")
+    @classmethod
+    def validate_ai_type(cls, v: str) -> str:
+        allowed = {"claude", "hermes"}
+        if v not in allowed:
+            raise ValueError(f"ai_type must be one of {allowed}")
+        return v
+
     messages_content: str = Field(...)
 
 
@@ -177,14 +194,16 @@ _file_changed_event: Optional[asyncio.Event] = None
 _main_loop: Optional[asyncio.AbstractEventLoop] = None  # 保存主线程 Event Loop（跨线程安全访问）
 _watchdog_started = False
 
+# 发布-订阅：每个 SSE 客户端独立的通知队列（替代共享 Event，避免惊群效应）
+_clients: List[asyncio.Queue] = []
+
 
 def _on_bridge_file_changed() -> None:
-    """watchdog 回调：通知所有 SSE 协程文件已变化（跨线程安全）"""
-    global _file_changed_event, _main_loop
-    if _file_changed_event is not None and _main_loop is not None:
-        if not _main_loop.is_closed():
-            # 使用保存的主 loop 安全地跨线程触发事件
-            _main_loop.call_soon_threadsafe(_file_changed_event.set)
+    """watchdog 回调：向所有 SSE 协程广播（发布-订阅模式）"""
+    global _file_changed_event, _main_loop, _clients
+    if _main_loop is not None and not _main_loop.is_closed():
+        for q in _clients:
+            _main_loop.call_soon_threadsafe(q.put_nowait, True)
 
 
 class _WatchdogHandler:
@@ -223,7 +242,7 @@ def _start_watchdog() -> None:
 
 async def sse_event_generator(request: Request):
     """SSE 异步生成器：替代原来的 _handle_sse_stream + SSEClient 线程模型"""
-    global _file_changed_event
+    global _clients
 
     # 获取客户端 last_event_id
     last_event_id = request.headers.get("Last-Event-Id", "0")
@@ -232,12 +251,13 @@ async def sse_event_generator(request: Request):
     except ValueError:
         last_offset = 0
 
-    # 确保 watchdog 已启动，全局事件在 asyncio 上下文中初始化
+    # 确保 watchdog 已启动
     if not _watchdog_started:
         _start_watchdog()
 
-    if _file_changed_event is None:
-        _file_changed_event = asyncio.Event()
+    # 为当前客户端创建独立的通知队列（发布-订阅）
+    client_queue: asyncio.Queue = asyncio.Queue()
+    _clients.append(client_queue)
 
     # 追赶阶段：发送从 last_offset 之后的所有消息
     messages = await asyncio.to_thread(get_messages_since, last_offset)
@@ -255,18 +275,14 @@ async def sse_event_generator(request: Request):
 
     try:
         while True:
-            # 等待文件变化事件（25秒超时）
-            # 每次循环重置事件，确保只响应新增变化
+            # 等待自己的队列收到通知（25秒超时）
             try:
-                await asyncio.wait_for(
-                    _file_changed_event.wait(),
-                    timeout=25,
-                )
+                await asyncio.wait_for(client_queue.get(), timeout=25)
+                # 清空队列中可能堆积的多余通知（防抖）
+                while not client_queue.empty():
+                    client_queue.get_nowait()
             except asyncio.TimeoutError:
                 pass  # 超时，继续发心跳
-
-            # 清除事件，等待下次文件变化
-            _file_changed_event.clear()
 
             # 心跳
             heartbeat_count += 1
@@ -291,6 +307,10 @@ async def sse_event_generator(request: Request):
 
     except asyncio.CancelledError:
         logger.debug("SSE generator cancelled")
+    finally:
+        # 客户端断开时，从全局列表中移除自己的队列
+        if client_queue in _clients:
+            _clients.remove(client_queue)
 
 
 # ---------------------------------------------------------------------------
@@ -342,11 +362,17 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Claude-Hermes Bridge", lifespan=lifespan)
 
 # CORS 中间件（替代原来的手动 end_headers）
+# 生产环境应通过 CORS_ORIGINS 环境变量配置白名单，不用 "*"
+_cors_origins = os.environ.get("CORS_ORIGINS", "").split(",") if os.environ.get("CORS_ORIGINS") else []
+if not _cors_origins:
+    # 默认仅允许同源请求，拒绝 wildcard
+    _cors_origins = []
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_cors_origins if _cors_origins else ["http://localhost:5173", "http://localhost:8765"],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # ---------------------------------------------------------------------------

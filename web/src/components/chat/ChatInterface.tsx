@@ -3,7 +3,7 @@ import { MessageInput } from './MessageInput'
 import { AThinkingIndicator } from './AThinkingIndicator'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { MessageSquare, Square, Sparkles, RefreshCw, FileText, Brain, Lightbulb } from 'lucide-react'
+import { MessageSquare, Square, Sparkles, FileText, Brain, Lightbulb } from 'lucide-react'
 import type { Message } from '@/lib/api'
 import type { AuthorFilter } from '@/hooks/useMessages'
 
@@ -107,9 +107,6 @@ export function ChatInterface({
               导出
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={() => window.location.reload()} title="刷新页面">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
