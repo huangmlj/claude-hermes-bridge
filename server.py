@@ -273,9 +273,14 @@ class BridgeHTTPHandler(http.server.SimpleHTTPRequestHandler):
                         self.wfile.write(f"id: {last_offset}\ndata: {data}\n\n".encode('utf-8'))
                         self.wfile.flush()
 
+        except (BrokenPipeError, ConnectionResetError, OSError) as e:
+            # 网络断开：客户端已关闭连接，及时回收线程
+            logger.debug(f"SSE client connection lost: {e.__class__.__name__}")
         except Exception as e:
-            logger.debug(f"SSE client disconnected: {e}")
+            # 意外异常（如 SystemExit、KeyboardInterrupt 之外的错误）
+            logger.warning(f"SSE stream unexpected error: {e}")
         finally:
+            # 保证客户端注销，无论何种路径退出
             unregister_sse_client(sse_client)
 
     # -------------------------------------------------------------------------

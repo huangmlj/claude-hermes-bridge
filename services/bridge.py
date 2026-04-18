@@ -57,6 +57,22 @@ def _ensure_lock_dir():
     LOCK_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _lock_retry_backoff(attempt: int, start_time: float, timeout: float, jitter: bool = True) -> Optional[float]:
+    """统一的锁重试退避计算（DRY 辅助函数）
+
+    Returns:
+        睡眠时间（秒），None 表示已超时应放弃
+    """
+    base_delay = LOCK_BASE_DELAY * (2 ** attempt)
+    if jitter:
+        base_delay += random.uniform(0, LOCK_BASE_DELAY * 0.5)
+    delay = min(base_delay, LOCK_MAX_DELAY)
+    remaining = timeout - (time.time() - start_time)
+    if delay > remaining:
+        return None  # 剩余时间不够，等待后直接放弃
+    return delay
+
+
 def acquire_processing_lock(timeout: float = 30.0) -> bool:
     """使用 fcntl.flock 获取处理锁（带指数退避 + jitter + 整体超时）"""
     global _lock_fd
@@ -78,21 +94,17 @@ def acquire_processing_lock(timeout: float = 30.0) -> bool:
         except BlockingIOError:
             if lock_fd:
                 lock_fd.close()
-            delay = min(LOCK_BASE_DELAY * (2 ** attempt) + random.uniform(0, LOCK_BASE_DELAY * 0.5), LOCK_MAX_DELAY)
-            remaining_time = timeout - (time.time() - start_time)
-            if delay > remaining_time:
-                time.sleep(remaining_time)
+            sleep_time = _lock_retry_backoff(attempt, start_time, timeout, jitter=True)
+            if sleep_time is None:
                 return False
-            time.sleep(delay)
-        except (IOError, OSError) as e:
+            time.sleep(sleep_time)
+        except (IOError, OSError):
             if lock_fd:
                 lock_fd.close()
-            delay = min(LOCK_BASE_DELAY * (2 ** attempt), LOCK_MAX_DELAY)
-            remaining_time = timeout - (time.time() - start_time)
-            if delay > remaining_time:
-                time.sleep(remaining_time)
+            sleep_time = _lock_retry_backoff(attempt, start_time, timeout, jitter=False)
+            if sleep_time is None:
                 return False
-            time.sleep(delay)
+            time.sleep(sleep_time)
 
     return False
 
@@ -353,11 +365,16 @@ def generate_message_id(author: str, content: str, timestamp: str) -> str:
 
 
 def append_bridge(entry: Dict[str, Any], update_checkpoint: bool = True, max_retries: int = 3) -> Optional[int]:
-    """追加消息到 bridge.jsonl（优化为O(1)追加模式）
+    """追加消息到 bridge.jsonl（O(1)追加模式，无 O(N) 文件扫描）
+
+    策略：追加写入是原子操作，写成功即为 lines_before+1。
+    - update_checkpoint=True 时：用 checkpoint 做 lines_before（O(1)），写后不扫描
+    - update_checkpoint=False 时：只在首次获取行数（O(N)），用于无 checkpoint 的独立写
 
     Args:
         entry: 消息 dict
         update_checkpoint: 是否同时更新 checkpoint
+        max_retries: 最大重试次数
 
     Returns:
         新消息的行号，失败返回 None
@@ -367,11 +384,13 @@ def append_bridge(entry: Dict[str, Any], update_checkpoint: bool = True, max_ret
     for attempt in range(max_retries):
         try:
             if update_checkpoint:
+                # O(1)：直接从 checkpoint 读取，不需要文件扫描
                 current_offset = _read_checkpoint()
                 if current_offset is None:
                     current_offset = get_true_line_count()
                 lines_before = current_offset
             else:
+                # 无 checkpoint：只在首次获取行数用于返回值
                 lines_before = get_true_line_count()
 
             with open(str(BRIDGE_FILE), "a", encoding='utf-8') as f:
@@ -379,24 +398,11 @@ def append_bridge(entry: Dict[str, Any], update_checkpoint: bool = True, max_ret
                 f.flush()
                 os.fsync(f.fileno())
 
-            lines_after = get_true_line_count()
+            # 追加写入是原子操作——写入成功即表示 lines_before+1，无需再扫文件
             new_offset = lines_before + 1
-
-            if lines_after == lines_before + 1:
-                if update_checkpoint:
-                    _update_checkpoint(new_offset)
-                return new_offset
-            else:
-                print(f"⚠️ append_bridge: 并发冲突检测 (期望 {lines_before + 1} 行，实际 {lines_after} 行)")
-                if attempt < max_retries - 1:
-                    delay = min(0.1 * (2 ** attempt) + random.uniform(0, 0.05), 1.0)
-                    time.sleep(delay)
-                    continue
-                else:
-                    print(f"⚠️ append_bridge: 并发冲突无法解决，返回近似行数 {lines_after}")
-                    if update_checkpoint:
-                        _update_checkpoint(lines_after)
-                    return lines_after
+            if update_checkpoint:
+                _update_checkpoint(new_offset)
+            return new_offset
 
         except (IOError, OSError) as e:
             if attempt < max_retries - 1:
