@@ -27,7 +27,6 @@ export function MessageList({
   viewingHistory,
 }: MessageListProps) {
   const parentRef = useRef<HTMLDivElement>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
 
   // Virtual list for messages - only renders visible items
   const virtualizer = useVirtualizer({
@@ -38,11 +37,12 @@ export function MessageList({
   })
 
   // Auto-scroll to bottom when new messages arrive
+  // 使用 virtualizer.scrollToIndex，自动处理动态高度测量后的补偿
   const scrollToBottom = useCallback(() => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' })
+    if (messages.length > 0) {
+      virtualizer.scrollToIndex(messages.length - 1, { align: 'end', behavior: 'smooth' })
     }
-  }, [])
+  }, [messages.length, virtualizer])
 
   useEffect(() => {
     scrollToBottom()
@@ -140,7 +140,6 @@ export function MessageList({
             ))}
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
     </div>
   )

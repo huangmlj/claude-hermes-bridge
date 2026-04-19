@@ -1,4 +1,5 @@
 export interface Message {
+  id: string
   layer: number
   author: 'user' | 'claude' | 'hermes'
   content: string

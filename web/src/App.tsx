@@ -25,6 +25,7 @@ import { useStatus } from './hooks/useStatus'
 import { useHistory } from './hooks/useHistory'
 import { useMessages } from './hooks/useMessages'
 import type { Message } from './lib/types'
+import { generateMessageId } from './lib/utils'
 import { ChatInterface } from './components/chat/ChatInterface'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { StartDiscussionDialog } from './components/modals/StartDiscussionDialog'
@@ -97,7 +98,14 @@ function AppContent() {
         const result = await discussionService.startDiscussion(content)
         setCurrentTopic(result.topic)
         clearMessages()
-        addMessage({ layer: 1, author: 'user', content, timestamp: new Date().toISOString() })
+        const timestamp = new Date().toISOString()
+        addMessage({
+          id: generateMessageId('user', content, timestamp),
+          layer: 1,
+          author: 'user',
+          content,
+          timestamp
+        })
         await discussionService.startAI()
         toast({ title: '话题已创建', description: 'AI 对话已开始' })
       } catch (e: any) {
@@ -111,7 +119,13 @@ function AppContent() {
       // 发送消息（乐观更新）
       setSending(true)
       const timestamp = new Date().toISOString()
-      const msg = { layer: 0, author: 'user' as const, content, timestamp }
+      const msg = {
+        id: generateMessageId('user', content, timestamp),
+        layer: 0,
+        author: 'user' as const,
+        content,
+        timestamp
+      }
       inFlightMessages.current.set(`user:${content}`, msg)
       addMessage(msg)
 
@@ -271,7 +285,14 @@ function AppContent() {
             setDiscussionFilename('')
             clearMessages()
             setViewingHistory(false)
-            addMessage({ layer: 1, author: 'user', content: topic, timestamp: new Date().toISOString() })
+            const timestamp = new Date().toISOString()
+            addMessage({
+              id: generateMessageId('user', topic, timestamp),
+              layer: 1,
+              author: 'user',
+              content: topic,
+              timestamp
+            })
             await discussionService.startAI()
             toast({ title: '话题已创建', description: 'AI 对话已开始' })
           } catch (e: any) {

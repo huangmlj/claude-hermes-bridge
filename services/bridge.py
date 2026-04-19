@@ -382,7 +382,7 @@ def append_bridge(entry: Dict[str, Any], update_checkpoint: bool = True, max_ret
     line = json.dumps(entry, ensure_ascii=False) + "\n"
 
     # 使用文件锁替代 threading.Lock（跨进程保护）
-    lock_fd = open(_APPEND_LOCK_FILE, "w")
+    lock_fd = open(_APPEND_LOCK_FILE, "a")
     try:
         fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)  # 阻塞式独占锁
         try:

@@ -17,11 +17,13 @@ export function MessageInput({ onSend, onStartAI, disabled, loading, placeholder
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // 自动高度：随着输入增加高度，最多200px
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
-    }
+    const ta = textareaRef.current
+    if (!ta) return
+    ta.style.height = 'auto'
+    const newHeight = Math.min(ta.scrollHeight, 200)
+    ta.style.height = `${newHeight}px`
   }, [value])
 
   const handleSend = () => {
@@ -52,7 +54,6 @@ export function MessageInput({ onSend, onStartAI, disabled, loading, placeholder
           placeholder={placeholder}
           disabled={disabled}
           className="min-h-[40px] max-h-[200px] resize-none pr-12"
-          rows={1}
         />
         <span className="absolute bottom-2 right-12 text-xs text-muted-foreground">
           {value.length}/2000

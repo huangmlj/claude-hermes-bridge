@@ -1,11 +1,11 @@
 {
-  "current_discussion": null,
-  "current_topic": null,
+  "current_discussion": "1_1__-20260418_233041.json",
+  "current_topic": "1+1=？",
   "current_layer": 0,
   "last_write_by": null,
   "claude_last_read": 0,
   "hermes_last_read": 0,
   "bridge_line_count": 0,
-  "discussion_id": null,
+  "discussion_id": "1_1__-20260418_233041",
   "discussion_started": false
 }

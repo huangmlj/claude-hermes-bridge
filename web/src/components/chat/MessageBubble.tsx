@@ -18,6 +18,22 @@ export const MessageBubble = memo(function MessageBubble({ message, showAuthor =
     safeMarkedParse(message.content).then(setHtmlContent)
   }, [message.content])
 
+  // 代码块复制按钮点击事件（DOM注入后绑定）
+  useEffect(() => {
+    const container = document.getElementById(`msg-${message.id}`)
+    if (!container) return
+    const handler = async (e: MouseEvent) => {
+      const btn = (e.target as Element).closest('.code-copy-btn') as HTMLButtonElement | null
+      if (!btn) return
+      const code = decodeURIComponent(btn.dataset.code || '')
+      await navigator.clipboard.writeText(code)
+      btn.textContent = '已复制!'
+      setTimeout(() => { btn.textContent = '复制' }, 2000)
+    }
+    container.addEventListener('click', handler)
+    return () => container.removeEventListener('click', handler)
+  }, [message.id, htmlContent])
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content)
     setCopied(true)
@@ -49,6 +65,7 @@ export const MessageBubble = memo(function MessageBubble({ message, showAuthor =
         !isUser && "ml-8"
       )}>
         <div
+          id={`msg-${message.id}`}
           className="prose prose-sm max-w-none dark:prose-invert"
           dangerouslySetInnerHTML={{ __html: htmlContent }}
         />

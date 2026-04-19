@@ -115,3 +115,15 @@
   background: none;
   padding: 0;
 }
+
+.code-block-wrapper {
+  position: relative;
+}
+
+.code-copy-btn {
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-family: inherit;
+  border: none;
+  transition: opacity 0.15s;
+}

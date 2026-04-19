@@ -91,17 +91,19 @@ export function useSSE(
     const jitter = Math.random() * 300
     const totalDelay = delay + jitter
 
-    setReconnectIn(Math.ceil(totalDelay / 1000))
+    // 使用局部变量追踪倒数，避免依赖 prev 状态闭包触发副作用
+    let countdown = Math.ceil(totalDelay / 1000)
+    setReconnectIn(countdown)
 
     reconnectTimer.current = setInterval(() => {
-      setReconnectIn(prev => {
-        if (prev <= 1) {
-          if (reconnectTimer.current) clearInterval(reconnectTimer.current)
-          connect()
-          return 0
-        }
-        return prev - 1
-      })
+      countdown -= 1
+      setReconnectIn(countdown) // 只做纯状态更新
+
+      if (countdown <= 0) {
+        // 在外层执行副作用
+        if (reconnectTimer.current) clearInterval(reconnectTimer.current)
+        connect()
+      }
     }, 1000)
   }, [connect])
 

@@ -1,0 +1,251 @@
+INFO:     Started server process [41190]
+INFO:     Waiting for application startup.
+2026-04-18 23:41:23,715 [INFO] Validating bridge state...
+2026-04-18 23:41:23,715 [INFO] Bridge state: 校验通过
+2026-04-18 23:41:23,716 [INFO] Watchdog Observer started (daemon thread)
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8765 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58935 - "GET /api/events?lastEventId=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58937 - "GET /api/status HTTP/1.1" 200 OK
+Exception in thread Thread-1:
+Traceback (most recent call last):
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/watchdog/observers/api.py", line 213, in run
+    self.dispatch_events(self.event_queue)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/watchdog/observers/api.py", line 391, in dispatch_events
+    handler.dispatch(event)
+    ^^^^^^^^^^^^^^^^
+AttributeError: '_WatchdogHandler' object has no attribute 'dispatch'
+INFO:     127.0.0.1:58964 - "OPTIONS /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58966 - "OPTIONS /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58963 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58963 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58966 - "POST /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58964 - "POST /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58964 - "GET /api/events?lastEventId=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58966 - "GET /discussions/1_1__-20260418_233041.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58968 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59006 - "GET /discussions/%E9%87%8D%E6%9E%84%E9%AA%8C%E8%AF%81%E6%B5%8B%E8%AF%95-20260418_222604.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59006 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59006 - "GET /discussions/1_1__-20260418_233041.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59006 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59006 - "GET /discussions/%E9%87%8D%E6%9E%84%E9%AA%8C%E8%AF%81%E6%B5%8B%E8%AF%95-20260418_222604.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59006 - "OPTIONS /api/discussion/start-ai HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59006 - "POST /api/discussion/start-ai HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59033 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59062 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59097 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59103 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59139 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59146 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59164 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59166 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59166 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59166 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59178 - "POST /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59176 - "POST /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59176 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59178 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59180 - "GET /discussions/%E9%87%8D%E6%9E%84%E9%AA%8C%E8%AF%81%E6%B5%8B%E8%AF%95-20260418_222604.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59180 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59180 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59180 - "POST /api/discussion/start-ai HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59180 - "POST /api/discussion/start-ai HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59180 - "POST /api/discussion/start-ai HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59180 - "POST /api/discussion/start-ai HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59180 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59180 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59234 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59249 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59249 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59266 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59266 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59271 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59291 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59314 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59314 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59322 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59333 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59333 - "GET /discussions/%E4%B8%9C%E6%96%B9%E8%B4%A2%E5%AF%8C%E8%BF%99%E5%8F%AA%E8%82%A1%E7%A5%A8_%E7%8E%B0%E5%9C%A8%E6%98%AF%E4%B8%8D%E6%98%AF%E4%BD%8D%E4%BA%8E%E5%9C%B0%E4%BD%8D_%E4%BB%8E-20260415_205001.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59361 - "GET /discussions/%E9%87%8D%E6%9E%84%E9%AA%8C%E8%AF%81%E6%B5%8B%E8%AF%95-20260418_222604.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59361 - "GET /discussions/1_1__-20260418_233041.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59361 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59361 - "GET /discussions/%E6%B5%8B%E8%AF%95%E9%87%8D%E6%9E%84-20260418_222230.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59361 - "GET /discussions/%E6%B5%8B%E8%AF%95%E8%AF%9D%E9%A2%98-20260418_174556.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59361 - "GET /discussions/1_1__-20260418_233041.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59361 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59383 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59410 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59410 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59411 - "POST /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59413 - "POST /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59413 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59411 - "GET /discussions/1_1__-20260418_233041.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59411 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59411 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59415 - "POST /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59445 - "POST /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59411 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59411 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59445 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59445 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59447 - "POST /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59415 - "POST /api/discussion/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59415 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59454 - "GET /api/status HTTP/1.1" 200 OK
+2026-04-18 23:45:04,581 [INFO] Received shutdown signal, cleaning up...
+ERROR:    Traceback (most recent call last):
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/uvicorn/_compat.py", line 30, in asyncio_run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "uvloop/loop.pyx", line 1512, in uvloop.loop.Loop.run_until_complete
+  File "uvloop/loop.pyx", line 1505, in uvloop.loop.Loop.run_until_complete
+  File "uvloop/loop.pyx", line 1379, in uvloop.loop.Loop.run_forever
+  File "uvloop/loop.pyx", line 557, in uvloop.loop.Loop._run
+  File "uvloop/loop.pyx", line 476, in uvloop.loop.Loop._on_idle
+  File "uvloop/cbhandles.pyx", line 83, in uvloop.loop.Handle._run
+  File "uvloop/cbhandles.pyx", line 61, in uvloop.loop.Handle._run
+  File "/Users/hmlj/solo/claude-hermes-bridge/server_fastapi.py", line 343, in graceful_shutdown
+    sys.exit(0)
+SystemExit: 0
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/routing.py", line 645, in lifespan
+    await receive()
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+    return await self.receive_queue.get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/asyncio/queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/uvicorn/_compat.py", line 30, in asyncio_run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "uvloop/loop.pyx", line 1512, in uvloop.loop.Loop.run_until_complete
+  File "uvloop/loop.pyx", line 1505, in uvloop.loop.Loop.run_until_complete
+  File "uvloop/loop.pyx", line 1379, in uvloop.loop.Loop.run_forever
+  File "uvloop/loop.pyx", line 557, in uvloop.loop.Loop._run
+  File "uvloop/loop.pyx", line 476, in uvloop.loop.Loop._on_idle
+  File "uvloop/cbhandles.pyx", line 83, in uvloop.loop.Handle._run
+  File "uvloop/cbhandles.pyx", line 61, in uvloop.loop.Handle._run
+  File "/Users/hmlj/solo/claude-hermes-bridge/server_fastapi.py", line 343, in graceful_shutdown
+    sys.exit(0)
+SystemExit: 0
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 420, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/fastapi/applications.py", line 1159, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/middleware/cors.py", line 96, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/middleware/cors.py", line 154, in simple_response
+    await self.app(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/fastapi/routing.py", line 134, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/fastapi/routing.py", line 121, in app
+    await response(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/sse_starlette/sse.py", line 416, in __call__
+    async with anyio.create_task_group() as task_group:
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/anyio/_backends/_asyncio.py", line 803, in __aexit__
+    raise exc_val
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/anyio/_backends/_asyncio.py", line 771, in __aexit__
+    await self._on_completed_fut
+asyncio.exceptions.CancelledError
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/uvicorn/_compat.py", line 30, in asyncio_run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "uvloop/loop.pyx", line 1512, in uvloop.loop.Loop.run_until_complete
+  File "uvloop/loop.pyx", line 1505, in uvloop.loop.Loop.run_until_complete
+  File "uvloop/loop.pyx", line 1379, in uvloop.loop.Loop.run_forever
+  File "uvloop/loop.pyx", line 557, in uvloop.loop.Loop._run
+  File "uvloop/loop.pyx", line 476, in uvloop.loop.Loop._on_idle
+  File "uvloop/cbhandles.pyx", line 83, in uvloop.loop.Handle._run
+  File "uvloop/cbhandles.pyx", line 61, in uvloop.loop.Handle._run
+  File "/Users/hmlj/solo/claude-hermes-bridge/server_fastapi.py", line 343, in graceful_shutdown
+    sys.exit(0)
+SystemExit: 0
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 420, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/fastapi/applications.py", line 1159, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/middleware/cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/fastapi/routing.py", line 134, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/fastapi/routing.py", line 121, in app
+    await response(scope, receive, send)
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/sse_starlette/sse.py", line 416, in __call__
+    async with anyio.create_task_group() as task_group:
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/anyio/_backends/_asyncio.py", line 803, in __aexit__
+    raise exc_val
+  File "/Users/hmlj/.pyenv/versions/3.11.10/lib/python3.11/site-packages/anyio/_backends/_asyncio.py", line 771, in __aexit__
+    await self._on_completed_fut
+asyncio.exceptions.CancelledError
