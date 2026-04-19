@@ -177,13 +177,20 @@ function AppContent() {
 
     try {
       await discussionService.endDiscussion()
+      // 重置所有相关状态
+      setCurrentTopic('')
+      setDiscussionFilename('')
+      setViewingHistory(false)
+      clearMessages()
+      localStorage.removeItem('lastEventId')
+      lastHistoryTimestampRef.current = null
       toast({ title: 'AI 对话已结束' })
     } catch (e: any) {
       toast({ title: '结束失败', description: e.message, variant: 'destructive' })
     } finally {
       endingRef.current = false
     }
-  }, [toast])
+  }, [toast, clearMessages])
 
   // -------------------------------------------------------------------------
   // 加载讨论

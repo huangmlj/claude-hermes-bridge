@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ServerStatus } from '@/lib/types'
-
-const BASE = 'http://localhost:8765'
+import { getApiBase } from '@/lib/api'
 
 async function getStatus(): Promise<ServerStatus> {
-  const res = await fetch(`${BASE}/api/status`)
+  const res = await fetch(`${getApiBase()}/api/status`)
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`)
   return res.json()
 }

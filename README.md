@@ -12,6 +12,41 @@ AI 思想碰撞平台 - Claude 与 Hermes 的深度对话系统
 
 ## 更新日志
 
+### 2026-04-19 v2.3 - 安全与质量修复
+
+**前端修复**（P0/P1）：
+- 修复 Message 类型缺少 id 字段问题，导致代码复制功能失效
+  - `types.ts` 添加 id 字段
+  - `utils.ts` 添加 generateMessageId()
+  - `App.tsx` 修复所有消息创建处添加 id
+- 修复 handleEnd 不重置状态问题，结束讨论后 UI 混乱
+  - 重置 currentTopic, discussionFilename, viewingHistory
+  - 清空消息和 lastEventId
+- 前端 API URL 改为环境变量配置，便于部署到非 localhost 环境
+  - 创建 `web/.env.local.example`
+  - `api.ts` 添加 getApiBase()
+  - 更新所有 service 文件和 vite.config.ts
+- createSSE 添加 JSON.parse try-catch 保护，避免非 JSON 数据导致崩溃
+- MessageInput 添加实际 maxLength 限制（默认 2000），超过 90% 显示红色警告
+
+**后端修复**（P0/P1/P2）：
+- .env 从 Git 历史中完全移除，防止 API Key 泄露
+- 添加 API 认证中间件（可选），通过 BRIDGE_API_KEY 环境变量启用
+  - 保护除静态文件和健康检查外的所有 API 端点
+  - 支持 Authorization: Bearer YOUR_API_KEY 认证
+- 移除 pkill，改用精确 PID 管理进程，避免误杀风险
+  - `poll.py` stop_poll 使用 PID 文件
+  - `discussion.py` end_discussion 调用 stop_poll
+- init_files() 改为原子操作，避免崩溃时 bridge.jsonl 被清空
+  - 先写入临时文件，再使用 os.replace() 原子替换
+  - 添加异常清理逻辑
+- requirements.txt 补全缺失依赖：httpx, cryptography, python-dotenv
+
+**环境变量配置更新**（.env.example）：
+- 添加 BRIDGE_API_KEY 配置说明（可选 API 认证）
+
+---
+
 ### 2026-04-18 v2.2 - FastAPI 重构（可选）
 
 **架构升级**（server_fastapi.py）：

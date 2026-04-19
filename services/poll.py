@@ -481,7 +481,7 @@ def start_poll(agent_name: str) -> dict:
 
 
 def stop_poll(agent_name: str) -> dict:
-    """停止轮询子进程
+    """停止轮询子进程（使用精确 PID）
 
     Returns:
         dict: {success: bool, message: str}
@@ -492,16 +492,21 @@ def stop_poll(agent_name: str) -> dict:
         if pid_file.exists():
             old_pid = int(pid_file.read_text().strip())
             try:
+                # 先尝试优雅关闭
                 os.kill(old_pid, 15)  # SIGTERM
                 time.sleep(0.5)
-                os.kill(old_pid, 9)  # SIGKILL 如果还没停
-            except OSError:
+                # 检查进程是否还在运行
+                os.kill(old_pid, 0)
+                # 还在运行，强制终止
+                os.kill(old_pid, 9)  # SIGKILL
+            except ProcessLookupError:
+                # 进程已不存在
                 pass
-            pid_file.unlink()
-
-        # 也用 pkill 作为备份
-        subprocess.run(["pkill", "-f", f"poll_loop.py {agent_name}"], capture_output=True)
-        subprocess.run(["pkill", "-f", f"poll.py {agent_name}"], capture_output=True)
+            except OSError as e:
+                # 其他错误，记录但继续
+                logger.warning(f"停止进程 {old_pid} 时出错: {e}")
+            finally:
+                pid_file.unlink()
 
         return {"success": True, "message": f"{agent_name} poll 已停止"}
 

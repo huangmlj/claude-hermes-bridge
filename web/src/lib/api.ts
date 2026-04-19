@@ -9,7 +9,12 @@
 
 import type { Message, Discussion, ServerStatus, AIModels } from './types'
 
-const BASE = 'http://localhost:8765'
+// 从环境变量读取 BASE URL，优先使用 Vite 的代理模式（开发环境）
+// 生产环境通过 .env.local 设置 VITE_API_BASE_URL
+const BASE = import.meta.env.VITE_API_BASE_URL || ''
+// 如果 BASE 为空（开发环境使用代理），回退到直接 URL
+const FALLBACK_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8765'
+const API_BASE = BASE || FALLBACK_BASE
 
 // ---------------------------------------------------------------------------
 // SSE
@@ -20,12 +25,16 @@ export function createSSE(
   onMessage: (msg: Message, id: string) => void,
   onError: () => void
 ) {
-  const url = `${BASE}/api/events${lastEventId ? `?lastEventId=${lastEventId}` : ''}`
+  const url = `${API_BASE}/api/events${lastEventId ? `?lastEventId=${lastEventId}` : ''}`
   const es = new EventSource(url)
 
   es.onmessage = (e) => {
-    const data = JSON.parse(e.data)
-    onMessage(data, e.lastEventId)
+    try {
+      const data = JSON.parse(e.data)
+      onMessage(data, e.lastEventId)
+    } catch (err) {
+      console.error('Failed to parse SSE message:', err, 'data:', e.data)
+    }
   }
   es.onerror = onError
 
@@ -33,7 +42,14 @@ export function createSSE(
 }
 
 export function getDiscussionFile(filename: string) {
-  return fetch(`${BASE}/discussions/${encodeURIComponent(filename)}`)
+  return fetch(`${API_BASE}/discussions/${encodeURIComponent(filename)}`)
+}
+
+// ---------------------------------------------------------------------------
+// 工具函数：导出 API_BASE 供 services 使用
+// ---------------------------------------------------------------------------
+export function getApiBase() {
+  return API_BASE
 }
 
 // ---------------------------------------------------------------------------

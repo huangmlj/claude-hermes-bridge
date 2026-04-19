@@ -7,10 +7,10 @@
  * - 总结 - Hermes (generateSummary) → API: POST /api/summary
  */
 
-const BASE = 'http://localhost:8765'
+import { getApiBase } from '@/lib/api'
 
 async function post<T>(path: string, body?: object): Promise<T> {
-  const res = await fetch(BASE + path, {
+  const res = await fetch(getApiBase() + path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,

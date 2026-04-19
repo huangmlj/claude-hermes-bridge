@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Optional
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, HTTPException, Depends
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
@@ -38,6 +38,7 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel, Field, field_validator
 
@@ -51,6 +52,21 @@ OUTPUT_DIR = BASE_DIR / "output"
 DISCUSSIONS_DIR = BASE_DIR / "discussions"
 
 PORT = int(os.environ.get("BRIDGE_PORT", "8765"))
+
+# API 认证配置（可选）
+API_KEY = os.environ.get("BRIDGE_API_KEY")
+# 不需要认证的路径（通配符匹配）
+_AUTH_EXEMPT_PATHS = {
+    "/",
+    "/index.html",
+    "/ui-options",
+    "/ui-options.html",
+    "/themes",
+    "/api/events",  # SSE 连接
+    "/api/status",  # 健康检查
+    "/api/models",  # 模型信息
+    "/static/",
+}
 
 # ---------------------------------------------------------------------------
 # 日志
@@ -374,6 +390,47 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
+
+# ---------------------------------------------------------------------------
+# API 认证中间件
+# ---------------------------------------------------------------------------
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    """API Key 认证中间件（可选启用）"""
+
+    async def dispatch(self, request: Request, call_next):
+        # 如果未配置 API_KEY，跳过认证
+        if not API_KEY:
+            return await call_next(request)
+
+        # 检查路径是否豁免认证
+        path = request.url.path
+        for exempt in _AUTH_EXEMPT_PATHS:
+            if path == exempt or path.startswith(exempt):
+                return await call_next(request)
+
+        # 检查 Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return JSONResponse(
+                content={"error": "Missing or invalid Authorization header", "success": False},
+                status_code=401
+            )
+
+        token = auth_header[7:]  # 移除 "Bearer " 前缀
+        if token != API_KEY:
+            return JSONResponse(
+                content={"error": "Invalid API key", "success": False},
+                status_code=403
+            )
+
+        return await call_next(request)
+
+
+# 添加认证中间件
+app.add_middleware(AuthMiddleware)
 
 # ---------------------------------------------------------------------------
 # 辅助函数（async wrappers 包装同步 services）

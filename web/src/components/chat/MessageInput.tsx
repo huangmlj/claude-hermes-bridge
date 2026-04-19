@@ -11,9 +11,12 @@ interface MessageInputProps {
   loading?: boolean
   placeholder?: string
   className?: string
+  maxLength?: number
 }
 
-export function MessageInput({ onSend, onStartAI, disabled, loading, placeholder = '输入消息...', className }: MessageInputProps) {
+const MAX_LENGTH = 2000
+
+export function MessageInput({ onSend, onStartAI, disabled, loading, placeholder = '输入消息...', className, maxLength = MAX_LENGTH }: MessageInputProps) {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -25,6 +28,13 @@ export function MessageInput({ onSend, onStartAI, disabled, loading, placeholder
     const newHeight = Math.min(ta.scrollHeight, 200)
     ta.style.height = `${newHeight}px`
   }, [value])
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value
+    if (newValue.length <= maxLength) {
+      setValue(newValue)
+    }
+  }
 
   const handleSend = () => {
     if (!value.trim() || disabled) return
@@ -49,14 +59,18 @@ export function MessageInput({ onSend, onStartAI, disabled, loading, placeholder
         <Textarea
           ref={textareaRef}
           value={value}
-          onChange={e => setValue(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
+          maxLength={maxLength}
           className="min-h-[40px] max-h-[200px] resize-none pr-12"
         />
-        <span className="absolute bottom-2 right-12 text-xs text-muted-foreground">
-          {value.length}/2000
+        <span className={cn(
+          "absolute bottom-2 right-12 text-xs",
+          value.length > maxLength * 0.9 ? "text-red-500" : "text-muted-foreground"
+        )}>
+          {value.length}/{maxLength}
         </span>
       </div>
       <Button

@@ -30,6 +30,7 @@ from services.bridge import (
     generate_message_id as _generate_message_id,
     get_archive_dir,
 )
+from services.poll import stop_poll
 
 ARCHIVE_DIR = _BRIDGE_DIR / "discussions"
 BRIDGE_FILE = _BRIDGE_DIR / "bridge.jsonl"
@@ -146,9 +147,9 @@ def end_discussion(summary: str = "") -> Dict[str, Any]:
     if not filename:
         raise ValueError("No active discussion")
 
-    # 停止轮询进程
-    subprocess.run(['pkill', '-f', 'poll.py hermes'], capture_output=True)
-    subprocess.run(['pkill', '-f', 'poll.py claude'], capture_output=True)
+    # 停止轮询进程（使用精确 PID）
+    stop_poll('hermes')
+    stop_poll('claude')
 
     # 读取消息
     messages = []

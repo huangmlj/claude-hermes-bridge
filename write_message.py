@@ -11,20 +11,30 @@ STATE_FILE = os.path.join(BRIDGE_DIR, "state.json")
 BRIDGE_FILE = os.path.join(BRIDGE_DIR, "bridge.jsonl")
 
 def init_files():
-    """确保文件存在，必要时初始化"""
+    """确保文件存在，必要时初始化（原子操作）"""
     # 确保 bridge.jsonl 存在且没有空行
     if not os.path.exists(BRIDGE_FILE):
         with open(BRIDGE_FILE, "w") as f:
             pass
         return 0
 
-    # 清理空行并计数
+    # 清理空行并计数（原子操作：先写临时文件再替换）
     with open(BRIDGE_FILE, "r") as f:
         lines = [line.strip() for line in f if line.strip()]
 
-    with open(BRIDGE_FILE, "w") as f:
-        for line in lines:
-            f.write(line + "\n")
+    tmp_file = BRIDGE_FILE + ".tmp"
+    try:
+        with open(tmp_file, "w") as f:
+            for line in lines:
+                f.write(line + "\n")
+
+        # 原子替换（os.replace 是原子操作）
+        os.replace(tmp_file, BRIDGE_FILE)
+    except Exception as e:
+        # 清理临时文件
+        if os.path.exists(tmp_file):
+            os.unlink(tmp_file)
+        raise e
 
     return len(lines)
 
