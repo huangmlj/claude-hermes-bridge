@@ -25,9 +25,10 @@ import { useStatus } from './hooks/useStatus'
 import { useHistory } from './hooks/useHistory'
 import { useMessages } from './hooks/useMessages'
 import type { Message } from './lib/types'
-import { generateMessageId } from './lib/utils'
+import { downloadTextFile, generateMessageId, makeDownloadFilename } from './lib/utils'
 import { ChatInterface } from './components/chat/ChatInterface'
 import { Sidebar } from './components/sidebar/Sidebar'
+import { HistoryPanel } from './components/sidebar/HistoryPanel'
 import { StartDiscussionDialog } from './components/modals/StartDiscussionDialog'
 import { TooltipProvider } from './components/ui/tooltip'
 import { ToastProvider, useToast } from './components/ui/use-toast'
@@ -45,6 +46,7 @@ function AppContent() {
   const [sending, setSending] = useState(false)
   const [viewingHistory, setViewingHistory] = useState(false)
   const [startingAI, setStartingAI] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   // SSE 飞行消息追踪（用于乐观更新去重）
   const inFlightMessages = useRef<Map<string, Message>>(new Map())
@@ -52,10 +54,11 @@ function AppContent() {
   const lastHistoryTimestampRef = useRef<string | null>(null)
   const startAICalledRef = useRef(false)
   const endingRef = useRef(false)
+  const restoredCurrentRef = useRef(false)
 
   const { status } = useStatus()
-  const { discussions, load: loadHistory, remove: deleteDiscussion } = useHistory()
-  const { messages, filtered, filter, setFilter, search, setSearch, add: addMessage, clear: clearMessages, setMessages } = useMessages()
+  const { discussions, loading: historyLoading, load: loadHistory, remove: deleteDiscussion } = useHistory()
+  const { messages, filtered, filter, setFilter, search, setSearch, add: addMessage, remove: removeMessage, clear: clearMessages, setMessages } = useMessages()
   const { toast } = useToast()
 
   // -------------------------------------------------------------------------
@@ -82,6 +85,39 @@ function AppContent() {
 
   const { status: sseStatus, reconnectIn } = useSSE(handleMessage)
 
+  useEffect(() => {
+    if (!currentTopic && status?.discussion_active && status.current_topic) {
+      setCurrentTopic(status.current_topic)
+      setViewingHistory(false)
+    }
+  }, [currentTopic, status?.current_topic, status?.discussion_active])
+
+  useEffect(() => {
+    if (
+      restoredCurrentRef.current ||
+      messages.length > 0 ||
+      !status?.discussion_active ||
+      !status.current_topic ||
+      !status.current_messages
+    ) {
+      return
+    }
+
+    restoredCurrentRef.current = true
+    messageService.getCurrentMessages()
+      .then(res => {
+        setMessages(res.messages)
+        const lastTimestamp = res.messages.length > 0 ? res.messages[res.messages.length - 1].timestamp : null
+        lastHistoryTimestampRef.current = lastTimestamp
+        localStorage.setItem('lastEventId', String(res.messages.length))
+      })
+      .catch(e => {
+        restoredCurrentRef.current = false
+        const msg = e instanceof Error ? e.message : String(e)
+        toast({ title: '恢复当前讨论失败', description: msg, variant: 'destructive' })
+      })
+  }, [messages.length, setMessages, status?.current_messages, status?.current_topic, status?.discussion_active, toast])
+
   // -------------------------------------------------------------------------
   // 发送消息
   // -------------------------------------------------------------------------
@@ -97,6 +133,7 @@ function AppContent() {
       try {
         const result = await discussionService.startDiscussion(content)
         setCurrentTopic(result.topic)
+        setDiscussionFilename(result.filename)
         clearMessages()
         const timestamp = new Date().toISOString()
         addMessage({
@@ -108,10 +145,11 @@ function AppContent() {
         })
         await discussionService.startAI()
         toast({ title: '话题已创建', description: 'AI 对话已开始' })
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e)
         startAICalledRef.current = false
         setStartingAI(false)
-        toast({ title: '创建话题失败', description: e.message, variant: 'destructive' })
+        toast({ title: '创建话题失败', description: msg, variant: 'destructive' })
       } finally {
         setSending(false)
       }
@@ -131,15 +169,17 @@ function AppContent() {
 
       try {
         await messageService.sendMessage(content)
-      } catch (e: any) {
+      } catch (e: unknown) {
         // 发送失败，移除飞行中标记
         inFlightMessages.current.delete(`user:${content}`)
-        toast({ title: '发送失败', description: e.message, variant: 'destructive' })
+        removeMessage(msg.id)
+        const errMsg = e instanceof Error ? e.message : String(e)
+        toast({ title: '发送失败', description: errMsg, variant: 'destructive' })
       } finally {
         setSending(false)
       }
     }
-  }, [currentTopic, clearMessages, addMessage, toast])
+  }, [currentTopic, clearMessages, addMessage, removeMessage, toast])
 
   // -------------------------------------------------------------------------
   // 启动 AI
@@ -159,11 +199,12 @@ function AppContent() {
         lastHistoryTimestampRef.current = null
         await discussionService.startAI()
         toast({ title: discussionFilename ? '已恢复讨论' : 'AI 对话已启动', description: 'AI 对话继续中' })
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e)
         startAICalledRef.current = false
         setViewingHistory(true)
         setStartingAI(false)
-        toast({ title: '启动失败', description: e.message, variant: 'destructive' })
+        toast({ title: '启动失败', description: msg, variant: 'destructive' })
       }
     }
   }, [currentTopic, discussionFilename, toast])
@@ -185,12 +226,13 @@ function AppContent() {
       localStorage.removeItem('lastEventId')
       lastHistoryTimestampRef.current = null
       toast({ title: 'AI 对话已结束' })
-    } catch (e: any) {
-      toast({ title: '结束失败', description: e.message, variant: 'destructive' })
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      toast({ title: '结束失败', description: msg, variant: 'destructive' })
     } finally {
       endingRef.current = false
     }
-  }, [toast, clearMessages])
+  }, [currentTopic, toast, clearMessages])
 
   // -------------------------------------------------------------------------
   // 加载讨论
@@ -201,13 +243,15 @@ function AppContent() {
       setMessages(res.messages)
       const lastTimestamp = res.messages.length > 0 ? res.messages[res.messages.length - 1].timestamp : null
       lastHistoryTimestampRef.current = lastTimestamp
+      localStorage.setItem('lastEventId', String(res.messages.length))
       setCurrentTopic(res.topic)
       setDiscussionFilename(filename)
       setViewingHistory(true)
       setView('chat')
       toast({ title: '已加载讨论', description: res.topic })
-    } catch (e: any) {
-      toast({ title: '加载失败', description: e.message, variant: 'destructive' })
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      toast({ title: '加载失败', description: msg, variant: 'destructive' })
     }
   }, [setMessages, toast])
 
@@ -220,8 +264,9 @@ function AppContent() {
     try {
       const result = await exportService.generateSummary(currentTopic, aiType, content)
       toast({ title: '总结已生成', description: `保存至 ${result.path}` })
-    } catch (e: any) {
-      toast({ title: '总结失败', description: e.message, variant: 'destructive' })
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      toast({ title: '总结失败', description: msg, variant: 'destructive' })
     }
   }, [currentTopic, messages, toast])
 
@@ -229,13 +274,26 @@ function AppContent() {
   // 导出
   // -------------------------------------------------------------------------
   const handleExport = useCallback(async () => {
-    if (!currentTopic) return
+    if (!currentTopic) {
+      toast({ title: '无法导出', description: '当前没有讨论话题。', variant: 'destructive' })
+      return
+    }
+    if (messages.length === 0) {
+      toast({ title: '无法导出', description: '当前讨论还没有消息。', variant: 'destructive' })
+      return
+    }
+
     const content = messages.map(m => `**${m.author}**: ${m.content}`).join('\n\n')
+    setExporting(true)
     try {
+      toast({ title: '正在导出', description: '正在生成 Markdown 文件...' })
       const result = await exportService.exportDiscussion(currentTopic, content)
-      toast({ title: '已导出', description: result.path })
-    } catch (e: any) {
-      toast({ title: '导出失败', description: e.message, variant: 'destructive' })
+      toast({ title: '已导出', description: `已保存至 ${result.path}` })
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      toast({ title: '导出失败', description: msg, variant: 'destructive' })
+    } finally {
+      setExporting(false)
     }
   }, [currentTopic, messages, toast])
 
@@ -250,31 +308,42 @@ function AppContent() {
         sseStatus={sseStatus}
         reconnectIn={reconnectIn}
         pollRunning={status?.poll_running}
-        discussions={discussions}
-        onLoad={handleLoadDiscussion}
-        onDelete={deleteDiscussion}
-        onRefreshHistory={loadHistory}
+        currentTopic={currentTopic || status?.current_topic}
+        messageCount={messages.length || status?.current_messages || 0}
+        viewingHistory={viewingHistory}
       />
       <main className="flex-1 overflow-hidden">
-        <ChatInterface
-          messages={filtered}
-          allCount={messages.length}
-          filter={filter}
-          onFilterChange={setFilter}
-          search={search}
-          onSearchChange={setSearch}
-          onSend={handleSend}
-          onStartAI={handleStartAI}
-          onEnd={handleEnd}
-          currentTopic={currentTopic}
-          pollRunning={status?.poll_running}
-          aiNames={{ claude: status ? 'Claude' : '...', hermes: status ? 'Hermes' : '...' }}
-          sending={sending}
-          viewingHistory={viewingHistory}
-          startingAI={startingAI}
-          onSummary={handleSummary}
-          onExport={handleExport}
-        />
+        {view === 'history' ? (
+          <HistoryPanel
+            discussions={discussions}
+            loading={historyLoading}
+            activeFilename={discussionFilename}
+            onLoad={handleLoadDiscussion}
+            onDelete={deleteDiscussion}
+            onRefresh={loadHistory}
+          />
+        ) : (
+          <ChatInterface
+            messages={filtered}
+            allCount={messages.length}
+            filter={filter}
+            onFilterChange={setFilter}
+            search={search}
+            onSearchChange={setSearch}
+            onSend={handleSend}
+            onStartAI={handleStartAI}
+            onEnd={handleEnd}
+            currentTopic={currentTopic}
+            pollRunning={status?.poll_running}
+            aiNames={{ claude: status ? 'Claude' : '...', hermes: status ? 'Hermes' : '...' }}
+            sending={sending}
+            viewingHistory={viewingHistory}
+            startingAI={startingAI}
+            exporting={exporting}
+            onSummary={handleSummary}
+            onExport={handleExport}
+          />
+        )}
         <Toaster />
       </main>
       <StartDiscussionDialog
@@ -289,7 +358,7 @@ function AppContent() {
           try {
             const result = await discussionService.startDiscussion(topic)
             setCurrentTopic(result.topic)
-            setDiscussionFilename('')
+            setDiscussionFilename(result.filename)
             clearMessages()
             setViewingHistory(false)
             const timestamp = new Date().toISOString()
@@ -302,11 +371,12 @@ function AppContent() {
             })
             await discussionService.startAI()
             toast({ title: '话题已创建', description: 'AI 对话已开始' })
-          } catch (e: any) {
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e)
             startAICalledRef.current = false
             setStartingAI(false)
             setCurrentTopic('')
-            toast({ title: '创建话题失败', description: e.message, variant: 'destructive' })
+            toast({ title: '创建话题失败', description: msg, variant: 'destructive' })
           } finally {
             setSending(false)
             setShowStartDialog(false)
