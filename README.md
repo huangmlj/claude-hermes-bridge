@@ -2,279 +2,425 @@
 
 AI 思想碰撞平台 - Claude 与 Hermes 的深度对话系统
 
-## 功能特性
+## 概述
 
-- 🌐 Web UI 实时展示对话（SSE 推送）
-- 🔄 双向 AI 对话（Claude × Hermes）
-- 💾 历史讨论保存与加载
-- 📊 Token 预算控制
-- 🎨 动态 AI 名称配置
+Claude-Hermes Bridge 是一个双向 AI 对话系统，允许两个 AI（Claude 和 Hermes）在用户引导下进行深度讨论。通过 Web UI 实时展示对话过程，支持消息分层、Token 预算控制、历史讨论管理等功能。
 
-## 更新日志
+### 核心特性
 
-### 2026-04-20 - 导出功能优化
+- **双向 AI 对话**：Claude × Hermes 交替讨论，相互回应
+- **实时 SSE 推送**：Web UI 通过 Server-Sent Events 实时接收消息
+- **消息分层机制**：Layer 1-4 全量保留，Layer 5-10 按策略截断，更深层仅保留摘要
+- **Token 预算控制**：可配置的 Token 消耗策略，避免单次对话过长
+- **历史讨论管理**：自动保存讨论到文件，支持加载历史继续
+- **导出与总结**：导出对话为 Markdown，调用 AI 生成讨论总结
 
-- 移除导出时的浏览器下载，仅保留后端保存到 `output/` 目录
+## 技术架构
 
-### 2026-04-19 v2.3 - 安全与质量修复
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Web UI (React)                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐│
+│  │  ChatInterface │  │  Sidebar   │  │  Header / StatusBar   ││
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘│
+│                            │                                     │
+│         ┌──────────────────┼──────────────────┐                 │
+│         ▼                  ▼                  ▼                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │ useSSE       │  │ useMessages │  │ useHistory  │              │
+│  └─────────────┘  └─────────────┘  └─────────────┘              │
+│         │                  │                                    │
+│         ▼                  ▼                                    │
+│  ┌─────────────────────────────────────────┐                    │
+│  │          services/ (API Layer)           │                    │
+│  │  discussionService | messageService | exportService         │
+│  └─────────────────────────────────────────┘                    │
+└─────────────────────────────────────────────────────────────────┘
+                              │ HTTP/REST + SSE
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    FastAPI Server (server_fastapi.py)           │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │  Routes: /api/discussion/* | /api/message | /api/export    │ │
+│  │  SSE: /api/events (watchdog 驱动的发布-订阅模式)            │ │
+│  │  Auth: Bearer Token Middleware (可选)                       │ │
+│  └─────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ▼                     ▼                     ▼
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│ services/    │      │ services/    │      │ services/   │
+│ bridge.py    │      │ discussion.py│      │ poll.py     │
+│ - WAL        │      │ - 生命周期   │      │ - AI 轮询   │
+│ - 锁机制     │      │ - 历史存档   │      │ - Claude   │
+│ - Checkpoint │      │              │      │ - Hermes   │
+└─────────────┘      └─────────────┘      └─────────────┘
+        │                     │                     │
+        ▼                     ▼                     ▼
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│ bridge.jsonl│      │ discussions/│      │ subprocess  │
+│ (WAL 日志)  │      │ (JSON 存档) │      │ (CLI 调用)  │
+└─────────────┘      └─────────────┘      └─────────────┘
+```
 
-**前端修复**（P0/P1）：
-- 修复 Message 类型缺少 id 字段问题，导致代码复制功能失效
-  - `types.ts` 添加 id 字段
-  - `utils.ts` 添加 generateMessageId()
-  - `App.tsx` 修复所有消息创建处添加 id
-- 修复 handleEnd 不重置状态问题，结束讨论后 UI 混乱
-  - 重置 currentTopic, discussionFilename, viewingHistory
-  - 清空消息和 lastEventId
-- 前端 API URL 改为环境变量配置，便于部署到非 localhost 环境
-  - 创建 `web/.env.local.example`
-  - `api.ts` 添加 getApiBase()
-  - 更新所有 service 文件和 vite.config.ts
-- createSSE 添加 JSON.parse try-catch 保护，避免非 JSON 数据导致崩溃
-- MessageInput 添加实际 maxLength 限制（默认 2000），超过 90% 显示红色警告
+## 项目结构
 
-**后端修复**（P0/P1/P2）：
-- .env 从 Git 历史中完全移除，防止 API Key 泄露
-- 添加 API 认证中间件（可选），通过 BRIDGE_API_KEY 环境变量启用
-  - 保护除静态文件和健康检查外的所有 API 端点
-  - 支持 Authorization: Bearer YOUR_API_KEY 认证
-- 移除 pkill，改用精确 PID 管理进程，避免误杀风险
-  - `poll.py` stop_poll 使用 PID 文件
-  - `discussion.py` end_discussion 调用 stop_poll
-- init_files() 改为原子操作，避免崩溃时 bridge.jsonl 被清空
-  - 先写入临时文件，再使用 os.replace() 原子替换
-  - 添加异常清理逻辑
-- requirements.txt 补全缺失依赖：httpx, cryptography, python-dotenv
+```
+claude-hermes-bridge/
+├── server_fastapi.py          # FastAPI HTTP 服务器（主入口）
+├── requirements.txt           # Python 依赖
+│
+├── services/                  # 业务逻辑层
+│   ├── __init__.py
+│   ├── bridge.py             # WAL 日志 + 锁 + Checkpoint
+│   ├── discussion.py         # 讨论生命周期管理
+│   ├── poll.py               # AI 轮询进程管理
+│   └── export.py             # 导出/总结服务
+│
+├── token_budget.py           # Token 预算控制
+├── validators.py             # 输入验证
+│
+├── discussions/              # 历史讨论存档目录
+├── output/                   # 导出文件目录
+│
+├── web/                      # React 前端
+│   ├── src/
+│   │   ├── App.tsx           # 根组件（组合层）
+│   │   ├── main.tsx          # 入口点
+│   │   ├── index.css         # 全局样式
+│   │   │
+│   │   ├── components/       # UI 组件
+│   │   │   ├── chat/         # 聊天相关
+│   │   │   │   ├── ChatInterface.tsx    # 聊天主界面
+│   │   │   │   ├── MessageInput.tsx      # 消息输入框
+│   │   │   │   ├── MessageList.tsx       # 消息列表（虚拟滚动）
+│   │   │   │   ├── MessageBubble.tsx     # 消息气泡
+│   │   │   │   └── AThinkingIndicator.tsx # AI 思考指示器
+│   │   │   │
+│   │   │   ├── header/       # 头部
+│   │   │   │   ├── Header.tsx            # 标题栏
+│   │   │   │   └── ServiceStatus.tsx    # 服务状态
+│   │   │   │
+│   │   │   ├── sidebar/       # 侧边栏
+│   │   │   │   ├── Sidebar.tsx          # 侧边栏容器
+│   │   │   │   ├── HistoryPanel.tsx     # 历史讨论面板
+│   │   │   │   └── StatusBar.tsx        # 状态栏
+│   │   │   │
+│   │   │   ├── modals/       # 对话框
+│   │   │   │   ├── StartDiscussionDialog.tsx  # 开始讨论
+│   │   │   │   └── ConfirmDeleteDialog.tsx    # 删除确认
+│   │   │   │
+│   │   │   └── ui/           # 基础 UI 组件
+│   │   │       ├── button.tsx
+│   │   │       ├── input.tsx
+│   │   │       ├── textarea.tsx
+│   │   │       ├── dialog.tsx
+│   │   │       ├── dropdown-menu.tsx
+│   │   │       ├── toast.tsx
+│   │   │       └── ...
+│   │   │
+│   │   ├── hooks/            # React Hooks
+│   │   │   ├── useSSE.ts     # SSE 连接管理
+│   │   │   ├── useMessages.ts # 消息状态管理
+│   │   │   ├── useHistory.ts  # 历史讨论管理
+│   │   │   ├── useDiscussion.ts # 讨论状态
+│   │   │   └── useStatus.ts   # 服务状态
+│   │   │
+│   │   ├── services/         # API 服务层
+│   │   │   ├── discussionService.ts  # 讨论 CRUD
+│   │   │   ├── messageService.ts     # 消息发送
+│   │   │   └── exportService.ts       # 导出/总结
+│   │   │
+│   │   └── lib/              # 工具库
+│   │       ├── api.ts        # API 基础配置 + SSE
+│   │       ├── types.ts      # TypeScript 类型定义
+│   │       └── utils.ts      # 工具函数
+│   │
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── dist/                 # 构建产物
+│
+├── .env                      # 环境配置（实际值）
+├── .env.example              # 环境配置示例
+└── start.sh                  # 启动脚本
+```
 
-**环境变量配置更新**（.env.example）：
-- 添加 BRIDGE_API_KEY 配置说明（可选 API 认证）
+## 快速开始
 
----
+### 环境要求
 
-### 2026-04-18 v2.2 - FastAPI 重构（可选）
+- Python 3.11+
+- Node.js 18+
+- npm
 
-**架构升级**（server_fastapi.py）：
-- 路由层全面拥抱 FastAPI 装饰器，告别意大利面条式 `if self.path == ...`
-- SSE 改为 `sse-starlette` 异步生成器，彻底解决长连接线程瓶颈
-- Pydantic Schemas 替代手动 JSON 校验，输入验证更可靠
-- CORS/生命周期/限速全部中间件化
+### 安装依赖
 
-**SSE 重写**：
-- 旧版：每个 SSE 连接一个线程 + `threading.Event` 等待
-- 新版：协程 + `asyncio.Event` 等待 + `watchdog` 文件变化回调唤醒，无线程阻塞
-- `EventSourceResponse` + `asyncio.to_thread` 包装所有同步文件 I/O
-
-**新增依赖**：`fastapi`, `uvicorn[standard]`, `pydantic>=2.0`, `sse-starlette`
-
-**启动方式**：
 ```bash
-# FastAPI 版本（推荐）
-python3 -m uvicorn server_fastapi:app --host 0.0.0.0 --port 8765
+# Python 依赖
+pip install -r requirements.txt
 
-# 或使用启动脚本（已更新）
+# 前端依赖
+cd web && npm install && cd ..
+```
+
+### 配置
+
+复制 `.env.example` 为 `.env` 并根据需要修改：
+
+```bash
+cp .env.example .env
+```
+
+主要配置项：
+
+| 配置项 | 说明 | 默认值 |
+|--------|------|--------|
+| `BRIDGE_API_KEY` | API 认证密钥（可选） | 无 |
+| `AI_NAME_CLAUDE` | 界面显示的 Claude 名称 | Claude |
+| `AI_NAME_HERMES` | 界面显示的 Hermes 名称 | MiniMax-M2.7 |
+| `CLAUDE_MODEL` | Claude 模型 | claude-opus-4-6 |
+| `LAYER_1_FULL` | Layer 1 全量保留 | true |
+| `USER_MSG_FULL_COUNT` | 额外保留用户消息数 | 3 |
+| `LAYER_2to4_FULL` | Layer 2-4 全量保留 | true |
+| `LAYER_5to10_TRUNCATE` | Layer 5-10 截断比例 | 0.3 |
+| `LAYER_OVER_10_SUMMARY` | >Layer 10 只留摘要 | true |
+| `MAX_CHARS` | 最大字符数 | 25000 |
+| `POLL_INTERVAL` | AI 轮询间隔(秒) | 2 |
+| `SSE_TIMEOUT` | SSE 超时时间(秒) | 300 |
+
+### 启动服务
+
+```bash
 bash start.sh
 ```
 
-### 2026-04-18 v2.1 - 性能优化
+启动后访问：
+- **React 前端**：http://localhost:5173
+- **API 状态**：http://localhost:8765/api/status
 
-**WAL 增量读取优化**（services/bridge.py）：
-- 引入 Byte Offset 缓存，`get_true_line_count()` 只需读取增量部分，十万行对话瞬间完成
-- 文件增长时从缓存指针位置增量累加，非增长/首次时全量读取
-- 移除写后 O(N) 验证扫描，追加即原子
+## 功能说明
 
-**锁重试逻辑 DRY 化**（services/bridge.py）：
-- 合并 BlockingIOError 和 IOError/OSError 为统一异常处理
-- 用 `isinstance()` 判断抖动因子，代码更简洁
+### 创建讨论
 
-**SSE 连接鲁棒性增强**（server.py）：
-- 写入循环内单独 try...except 捕获网络断开，干净 break 退出
-- 心跳/消息推送异常不影响主循环，ConnectionAbortedError 单独处理
-- 外层统一捕获意外异常并记录日志
+1. 在输入框输入话题，按回车或点击发送
+2. 系统自动创建讨论，启动两个 AI 的对话
+3. 消息通过 SSE 实时推送到界面
 
-### 2026-04-18 v2.0 - 重构
+### 消息分层机制
 
-**后端分层架构**：
-- `server.py` 重写为薄 HTTP 路由层（1415行 → 585行）
-- `services/bridge.py` - WAL + Checkpoint + 锁（原 bridge_core.py）
-- `services/poll.py` - AI 轮询（合并自 poll_loop.py + handlers）
-- `services/discussion.py` - 讨论生命周期管理
-- `services/export.py` - 导出/总结服务
-- `services/handlers.py` - SSE 连接管理
+系统根据消息的 `layer` 字段进行分层处理：
 
-**前端 Service 层**：
-- `web/src/services/discussionService.ts` - 讨论 CRUD
-- `web/src/services/messageService.ts` - 消息发送
-- `web/src/services/exportService.ts` - 导出/总结
-- `web/src/hooks/useDiscussion.ts` - 讨论状态管理
-- `App.tsx` 重构为组合层
+| Layer | 来源 | 保留策略 |
+|-------|------|----------|
+| 1 | 用户原始话题 | 全量保留 |
+| 2-4 | AI 讨论层 | 全量保留（可配置） |
+| 5-10 | 深层推理 | 按 `LAYER_5to10_TRUNCATE` 截断 |
+| >10 | 极深层推理 | 仅保留摘要（可配置） |
 
-**已删除**：`bridge_core.py`, `poll_loop.py`, `hermes_handler.py`, `claude_handler.py`
+### 历史讨论
 
-**API 端点**：所有按钮功能通过 services 层调用，逻辑清晰完整。
+- 侧边栏切换到"历史"视图
+- 显示所有存档的讨论列表
+- 点击讨论可加载继续
+- 支持删除历史讨论
 
-### 2026-04-15 v1.2
+### 导出与总结
 
-**按钮显示逻辑修复**：
-1. 修复 AI 对话启动后出现两个"结束讨论"按钮的问题
-2. 修复页面刷新后显示两个"结束讨论"按钮的问题
-3. 修复无活跃讨论时点击"结束讨论"按钮报"No active discussion"错误
+- **导出**：将当前讨论保存为 Markdown 文件到 `output/` 目录
+- **Claude 总结**：调用 Claude 生成讨论摘要
+- **Hermes 总结**：调用 Hermes 生成讨论摘要
 
-### 2026-04-15 v1.1
+### Token 预算控制
 
-**历史讨论功能修复**：
-1. 修复 `GET /discussions` API 路由问题 → 改为 `POST /api/discussion/list`
-2. 修复 `handle_list_discussions` 返回格式 → `{discussions: [...]}` 包装
-3. 修复中文文件名 URL 编码问题 → 添加 `unquote()` 解码
-4. 修复历史讨论加载时消息区域未清空问题（`loadDiscussion` 添加 `clearMessages()` 调用）
-5. 修复 `hideAIThinking()` 函数 null check 问题
+系统通过 `token_budget.py` 控制 Token 消耗：
 
-**项目初始化**：
-- 初始化 git 仓库
-- 添加 .env.example 配置模板
+1. **字符数限制**：`MAX_CHARS` 强制截断
+2. **分层截断**：按层级应用不同保留策略
+3. **摘要生成**：深层消息生成摘要替代原文
 
-## AI 名称配置
+## API 参考
 
-界面上的 AI 名称可通过 `.env` 文件配置：
+### 讨论管理
 
-```bash
-AI_NAME_CLAUDE=Claude        # 显示的 Claude AI 名称
-AI_NAME_HERMES=MiniMax-M2.7  # 显示的 Hermes AI 名称
-```
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/discussion/start` | 创建新讨论 |
+| POST | `/api/discussion/start-ai` | 启动 AI 轮询 |
+| POST | `/api/discussion/end` | 结束讨论 |
+| GET | `/api/discussion/list` | 获取讨论列表 |
+| GET | `/discussions/{filename}` | 加载讨论文件 |
+| POST | `/api/discussion/delete` | 删除讨论 |
 
-修改后刷新页面即可生效。
+### 消息
 
-## Token 预算配置
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/message` | 发送消息 |
+| GET | `/messages` | 获取当前讨论消息 |
 
-在 `.env` 中配置消息保留策略：
+### 导出
 
-```
-LAYER_1_FULL=true            # Layer 1 用户话题全量保留
-USER_MSG_FULL_COUNT=1         # 用户发言保留最近几条
-LAYER_2to4_FULL=true         # Layer 2-4 全量保留
-LAYER_5to10_TRUNCATE=0.5     # Layer 5-10 截断50%
-LAYER_OVER_10_SUMMARY=true   # >Layer 10 只留摘要
-MAX_CHARS=10000              # 强制截断字符数上限
-```
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/export` | 导出讨论到 Markdown |
+| POST | `/api/summary` | 生成 AI 总结 |
 
-## 启动服务
+### 服务控制
 
-```bash
-# 方式1：直接运行
-python3 bridge_core.py
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/services` | 获取服务状态 |
+| POST | `/api/services/start` | 启动所有服务 |
+| POST | `/api/services/stop` | 停止所有服务 |
 
-# 方式2：使用启动脚本
-bash claude_bridge.sh
-```
-
-服务启动后访问 http://localhost:PORT（参见 .env 中的 PORT 配置）
-
-## 项目结构
+### SSE 事件
 
 ```
-claude-hermes-bridge/
-├── index.html           # Web UI 前端
-├── bridge_core.py       # 核心桥接逻辑 + HTTP server
-├── claude_handler.py    # Claude API 处理模块
-├── hermes_handler.py    # Hermes API 处理模块
-├── discussions/         # 历史讨论存储目录
-├── .env                 # 配置文件
-├── .env.example         # 配置模板
-└── claude_bridge.sh     # 启动脚本
+GET /api/events?lastEventId={n}
 ```
 
-## Token 消耗说明
+SSE 事件格式：
 
-- **Layer 1（用户原始输入）**：完整保留
-- **Layer 2-4（AI 对话层）**：完整保留
-- **Layer 5-10（更深层推理）**：按配置比例截断
-- **Layer >10（极深层推理）**：仅保留摘要
-- **MAX_CHARS**：硬截断上限（默认 10000）
+```json
+{
+  "id": "消息ID",
+  "layer": 2,
+  "author": "claude",
+  "content": "消息内容",
+  "timestamp": "2026-04-20T12:00:00.000Z"
+}
+```
 
-## 相关文档
+## 数据存储
 
-- [AI_INTEGRATION.md](./AI_INTEGRATION.md) — AI 集成就餐详情
+### bridge.jsonl (WAL 日志)
 
-AI 思想碰撞平台 - Claude 与 Hermes 的深度对话系统
+追加写入的日志文件，记录所有消息：
 
-## 功能特性
+```json
+{"author": "user", "content": "话题", "timestamp": "...", "layer": 1}
+{"author": "claude", "content": "...", "timestamp": "...", "layer": 2}
+{"author": "hermes", "content": "...", "timestamp": "...", "layer": 2}
+```
 
-- 🌐 Web UI 实时展示对话（SSE 推送）
-- 🔄 双向 AI 对话（Claude × Hermes）
-- 💾 历史讨论保存与加载
-- 📊 Token 预算控制
-- 🎨 动态 AI 名称配置
+### state.json (状态文件)
+
+UI 元数据：
+
+```json
+{
+  "current_topic": "当前话题",
+  "discussion_active": true,
+  "poll_running": true,
+  "current_layer": 3
+}
+```
+
+### discussions/ (讨论存档)
+
+JSON 格式的讨论文件，包含消息列表和元数据。
+
+### output/ (导出目录)
+
+导出的 Markdown 文件和 AI 总结。
+
+## 安全机制
+
+### 输入验证
+
+- `validators.py` 提供全面的输入验证
+- Pydantic 模型验证 API 请求
+- 路径遍历防护（`load_discussion` 等）
+
+### API 认证（可选）
+
+设置 `BRIDGE_API_KEY` 环境变量后，所有 API 请求需要携带：
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+### 进程锁
+
+使用 `fcntl.flock` 防止多进程并发写入 WAL 日志。
+
+### 原子写入
+
+状态文件使用临时文件 + `os.replace()` 实现原子写入。
+
+## 故障排除
+
+### 服务无法启动
+
+1. 检查端口占用：`lsof -i :8765`
+2. 查看日志：`tail -f server.log`
+
+### SSE 连接失败
+
+1. 确认后端运行：`curl http://localhost:8765/api/status`
+2. 检查前端 API 配置：`.env.local` 中的 `VITE_BACKEND_URL`
+
+### AI 无响应
+
+1. 检查 AI CLI 是否可用：`claude --version` / `hermes --version`
+2. 查看轮询日志：`tail -f poll_loop.log`
+
+### 消息丢失
+
+1. 检查 WAL 完整性：`python3 -c "from services.bridge import get_true_line_count; print(get_true_line_count())"`
+2. 验证 checkpoint：`cat .checkpoint`
 
 ## 更新日志
 
-### 2026-04-15 修复
+### 2026-04-20
 
-**历史讨论功能修复**：
-1. 修复 `GET /discussions` API 路由问题 → 改为 `POST /api/discussion/list`
-2. 修复 `handle_list_discussions` 返回格式 → `{discussions: [...]}` 包装
-3. 修复中文文件名 URL 编码问题 → 添加 `unquote()` 解码
-4. 修复历史讨论加载时消息区域未清空问题
-5. 修复 `hideAIThinking()` 函数 null check 问题
+- 导出功能优化：移除浏览器下载，仅保留后端保存
 
-## AI 名称配置
+### 2026-04-20
 
-界面上的 AI 名称可通过 `.env` 文件配置：
+**SSE 重构**：
+- 引入 watchdog 文件变化监控 + asyncio.Event 发布-订阅模式
+- 消除 SSE "惊群" 问题（thundering herd）
+- 连接超时 10 秒自动断开 + lastEventId 断点续传
 
-```bash
-AI_NAME_CLAUDE=Claude        # 显示的 Claude AI 名称
-AI_NAME_HERMES=MiniMax-M2.7  # 显示的 Hermes AI 名称
-```
+**前端优化**：
+- MessageList 虚拟滚动（TanStack Virtual）处理大量消息
+- MessageBubble Markdown 渲染 + 代码块复制按钮
+- MessageInput 自动高度调整 + maxLength 限制
+- 修复乐观更新去重逻辑
 
-修改后刷新页面即可生效。
+### 2026-04-19 v2.3 - 安全与质量修复
 
-## Token 预算配置
+**前端修复**：
+- 修复 Message 类型缺少 id 字段问题
+- 修复 handleEnd 不重置状态问题
+- 前端 API URL 改为环境变量配置
 
-在 `.env` 中配置消息保留策略：
+**后端修复**：
+- .env 从 Git 历史完全移除
+- 添加可选 API 认证中间件
+- 移除 pkill，改用精确 PID 管理
+- init_files() 原子操作
 
-```
-LAYER_1_FULL=true            # Layer 1 用户话题全量保留
-USER_MSG_FULL_COUNT=1         # 用户发言保留最近几条
-LAYER_2to4_FULL=true         # Layer 2-4 全量保留
-LAYER_5to10_TRUNCATE=0.5     # Layer 5-10 截断50%
-LAYER_OVER_10_SUMMARY=true   # >Layer 10 只留摘要
-MAX_CHARS=10000              # 强制截断字符数上限
-```
+### 2026-04-18 v2.2 - FastAPI 重构
 
-## 启动服务
+- 路由层全面拥抱 FastAPI 装饰器
+- SSE 改为 sse-starlette 异步生成器
+- Pydantic Schemas 替代手动 JSON 校验
 
-```bash
-./start.sh
-```
+### 2026-04-18 v2.1 - 性能优化
 
-访问 http://localhost:8765
+- WAL 增量读取（Byte Offset 缓存）
+- 移除写后 O(N) 验证扫描
+- 锁重试逻辑 DRY 化
 
-## 项目结构
+### 2026-04-18 v2.0 - 重构
 
-```
-claude-hermes-bridge/
-├── server_fastapi.py      # FastAPI HTTP 服务器（推荐）
-├── server.py              # 旧版 http.server（已废弃）
-├── services/              # 业务逻辑层
-│   ├── bridge.py          # WAL + Checkpoint + 锁
-│   ├── poll.py            # AI 轮询进程管理
-│   ├── discussion.py      # 讨论生命周期
-│   ├── export.py          # 导出/总结
-│   └── handlers.py        # SSE 连接管理（仅旧版server.py使用）
-├── validators.py          # 输入验证
-├── token_budget.py        # Token 预算控制
-├── bridge.jsonl           # WAL 日志
-├── state.json             # UI 元数据
-├── discussions/            # 历史讨论存档
-└── web/                  # React 前端
-    └── src/
-        ├── services/         # 前端服务层
-        ├── hooks/            # 状态 hooks
-        └── components/       # UI 组件
-```
-```
+- 后端分层：bridge.py, poll.py, discussion.py, export.py
+- 前端 Service 层拆分
+- 删除旧文件：bridge_core.py, poll_loop.py 等
 
-## 导出功能
+## 许可证
 
-- 📄 导出对话：导出全部对话内容到 `output/` 文件夹
-- 📝 Claude/Hermes 总结：调用对应 AI 对话内容进行总结并导出
-
----
+MIT
